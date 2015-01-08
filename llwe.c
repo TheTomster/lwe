@@ -2,14 +2,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <sys/ioctl.h>
-
-#define i int
-#define c char
-#define v void
-#define str const char *
-#define err(s) fprintf(stderr, "error: " s "\n")
-#define p(s) printf("%s", s)
-#define pc(c) printf("%c", c)
+#include "defines.h"
 
 c *b; i bs, g, gs, lines, cols, scrl;
 
