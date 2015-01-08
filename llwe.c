@@ -23,9 +23,9 @@ i bread(str fn) {
    return 1; }
 i isend(c *s_) { return s_ >= (b + bs - gs); }
 v draw() {
-   i r_, c_; c *s_; r_ = c_ = 0; s_ = scrl; p("\x1B[2J\x1B[H");
-   draw:
-   if (isend(s_)) return;
+   i r_, c_; c *s_; r_ = c_ = 0; s_ = scrl;
+   p("\x1B[2J\x1B[H");
+   draw: if (isend(s_)) return;
    pc(*s_++); c_++; if (*s_=='\n') c_=0; c_%=cols; r_+=c_==0?1:0;
    if (r_ > lines) return; else goto draw; }
 v scup() { /* TODO */ }
