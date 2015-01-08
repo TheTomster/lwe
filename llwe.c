@@ -11,7 +11,7 @@
 #define p(s) printf("%s", s)
 #define pc(c) printf("%c", c)
 
-c *b, *scrl; i bs, g, gs, lines, cols;
+c *b; i bs, g, gs, lines, cols, scrl;
 
 i bext() { gs = bs; bs*=2; b=realloc(b, bs); if (b==NULL) return 0; return 1; }
 i bput(c c_) { b[g++]=c_; gs--; if (gs==0) return bext(); return 1; }
@@ -23,24 +23,15 @@ i bread(str fn) {
    return 1; }
 i isend(c *s_) { return s_ >= (b + bs - gs); }
 v draw() {
-   i r_, c_; c *s_; r_ = c_ = 0; s_ = scrl;
+   i r_, c_, i_; c *s_; r_ = c_ = 0; i_ = scrl;
+   for (s_=b; i_ > 0 && !isend(s_); s_++) if (*s_=='\n') i_--;
    p("\x1B[2J\x1B[H");
    draw: if (isend(s_)) return;
    pc(*s_++); c_++; if (*s_=='\n') c_=0; c_%=cols; r_+=c_==0?1:0;
    if (r_ > lines) return; else goto draw; }
-v scup() { /* TODO */ }
-v scdown() {
-   c *n_; n_ = scrl; loop: n_++;
-   if (isend(n_) || *n_=='\n') {
-      n_++;
-      if (isend(n_)) { n_=b+bs-1; scrl=n_; scup();  }
-      else { scrl=n_; }
-   } else goto loop; }
-v doscrl(i d_) {
-   i i_;
-   if (d_<0) for (i_=1;i_<-d_;i_++) scup(); else for (i_=1;i_<d_;i_++) scdown(); }
+v doscrl(i d_) { scrl+=d_; if (scrl < 0) scrl=0; }
 v cmdloop() { draw(); }
-v ed(str fn_) { if (!bread(fn_)) return; scrl = b; doscrl(10); cmdloop(); }
+v ed(str fn_) { if (!bread(fn_)) return; scrl=0; doscrl(10); cmdloop(); }
 v dtlines() {
    struct winsize w_; ioctl(0, TIOCGWINSZ, &w_);
    lines = w_.ws_row; cols = w_.ws_col; }
