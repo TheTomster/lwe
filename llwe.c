@@ -21,7 +21,7 @@ v draw() {
    p("\x1B[2J\x1B[H");
    draw: if (isend(s_)) return;
    pc(*s_++); c_++; if (*s_=='\n') c_=0; c_%=cols; r_+=c_==0?1:0;
-   if (r_ > lines) return; else goto draw; }
+   if (r_ <= lines) goto draw; }
 v doscrl(i d_) { scrl+=d_; if (scrl < 0) scrl=0; }
 v cmdloop() { draw(); }
 v ed(str fn_) { if (!bread(fn_)) return; scrl=0; doscrl(10); cmdloop(); }
