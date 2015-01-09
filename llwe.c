@@ -24,7 +24,7 @@ v draw() {
    if (r_ <= lines) goto draw; }
 v doscrl(i d_) { scrl+=d_; if (scrl < 0) scrl=0; }
 v cmdloop() { draw(); }
-v ed(str fn_) { if (!bread(fn_)) return; scrl=0; doscrl(10); cmdloop(); }
+v ed(str fn_) { if (!bread(fn_)) return; scrl=0; cmdloop(); }
 v dtlines() {
    struct winsize w_; ioctl(0, TIOCGWINSZ, &w_);
    lines = w_.ws_row; cols = w_.ws_col; }
