@@ -9,11 +9,11 @@ c *b; i bs, g, gs, lines, cols, scrl;
 i bext() { gs = bs; bs*=2; b=realloc(b, bs); if (b==NULL) return 0; return 1; }
 i bput(c c_) { b[g++]=c_; gs--; if (gs==0) return bext(); return 1; }
 i bread(str fn) {
-   c c_; FILE *f; bs=4096; g = 0; gs = bs;
+   c c_; FILE *f_; bs=4096; g = 0; gs = bs;
    b = malloc(bs); if (b==NULL) { err("memory"); return 0; }
-   f = fopen(fn, "r"); if (f==NULL) { err("read"); return 0; }
-   for (c_=fgetc(f);c_!=EOF;c_=fgetc(f)) if (!bput(c_)) return 0;
-   return 1; }
+   f_ = fopen(fn, "r"); if (f_==NULL) { err("read"); return 0; }
+   for (c_=fgetc(f_);c_!=EOF;c_=fgetc(f_)) if (!bput(c_)) goto fail;
+   fclose(f_); return 1; fail: fclose(f_); return 0; }
 i isend(c *s_) { return s_ >= (b + bs - gs); }
 v draw() {
    i r_, c_, i_; c *s_; r_ = c_ = 0; i_ = scrl;
