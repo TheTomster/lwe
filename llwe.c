@@ -16,7 +16,7 @@ i bread(str fn) {
    f_ = fopen(fn, "r"); if (f_==NULL) { err("read"); return 0; }
    for (c_=fgetc(f_);c_!=EOF;c_=fgetc(f_)) if (!bput(c_)) goto fail;
    fclose(f_); return 1; fail: fclose(f_); return 0; }
-i isend(c *s_) { return s_ >= (b + bs - gs); }
+i isend(const c *s_) { return s_ >= (b + bs - gs); }
 v draw() {
    i r_, c_, i_; c *s_; r_ = c_ = 0; i_ = scrl;
    for (s_=b; i_ > 0 && !isend(s_); s_++) if (*s_=='\n') i_--;
