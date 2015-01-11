@@ -6,7 +6,9 @@
 
 c *b; i bs, g, gs, lines, cols, scrl;
 
-i bext() { gs = bs; bs*=2; b=realloc(b, bs); if (b==NULL) return 0; return 1; }
+i bext() {
+   gs = bs; bs*=2; b=realloc(b, bs);
+   if (b==NULL) { err("memory"); return 0; } return 1; }
 i bput(c c_) { b[g++]=c_; gs--; if (gs==0) return bext(); return 1; }
 i bread(str fn) {
    c c_; FILE *f_; bs=4096; g = 0; gs = bs;
