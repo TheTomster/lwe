@@ -20,7 +20,7 @@ v draw() {
    for (s_=b; i_ > 0 && !isend(s_); s_++) if (*s_=='\n') i_--;
    p("\x1B[2J\x1B[H");
    draw: if (isend(s_)) return;
-   pc(*s_++); c_++; if (*s_=='\n') { pc('\r'); c_=0; } c_%=cols; r_+=c_==0?1:0;
+   pc(*s_++); c_++; if (*s_=='\n') { pc('\r'); c_=0; } c_%=cols; if (c_==0) r_++;
    if (r_ <= lines) goto draw; }
 v doscrl(i d_) { scrl+=d_; if (scrl < 0) scrl=0; }
 v cmdloop() { draw(); }
