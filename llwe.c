@@ -35,7 +35,7 @@ v dtlines() {
    struct winsize w_; ioctl(0, TIOCGWINSZ, &w_);
    lines = w_.ws_row; cols = w_.ws_col; }
 v raw() { system("stty raw -echo"); }  v unraw() { system("stty cooked echo"); }
-int main(i argc, c **argv) {
+i main(i argc, c **argv) {
    dtlines();
    if (argc != 2) { err("missing file arg"); return 2; }
    else { raw(); ed(argv[1]); unraw(); return 0; } }
