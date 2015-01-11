@@ -17,7 +17,8 @@ i bread(str fn) {
    for (c_=fgetc(f_);c_!=EOF;c_=fgetc(f_)) if (!bput(c_)) goto fail;
    fclose(f_); return 1; fail: fclose(f_); return 0; }
 i isend(const c *s_) { return s_ >= (b + bs - gs); }
-v cls() { p("\x1B[2J\x1B[H"); }  v draw() {
+v cls() { p("\x1B[2J\x1B[H"); }
+v draw() {
    i r_, c_, i_; c *s_;  r_=c_=0;
    for (i_=scrl,s_=b; i_>0 && !isend(s_); s_++) if (*s_=='\n') i_--; cls();
    draw: if (isend(s_)) return;
