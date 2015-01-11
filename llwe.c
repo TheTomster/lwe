@@ -17,20 +17,23 @@ i bread(str fn) {
    for (c_=fgetc(f_);c_!=EOF;c_=fgetc(f_)) if (!bput(c_)) goto fail;
    fclose(f_); return 1; fail: fclose(f_); return 0; }
 i isend(const c *s_) { return s_ >= (b + bs - gs); }
-v draw() {
-   i r_, c_, i_; c *s_; r_ = c_ = 0; i_ = scrl;
-   for (s_=b; i_ > 0 && !isend(s_); s_++) if (*s_=='\n') i_--;
-   p("\x1B[2J\x1B[H");
+v cls() { p("\x1B[2J\x1B[H"); }  v draw() {
+   i r_, c_, i_; c *s_;  r_=c_=0;
+   for (i_=scrl,s_=b; i_>0 && !isend(s_); s_++) if (*s_=='\n') i_--; cls();
    draw: if (isend(s_)) return;
    pc(*s_++); c_++; if (*s_=='\n') { pc('\r'); c_=0; } c_%=cols; if (c_==0) r_++;
    if (r_ <= lines) goto draw; }
 v doscrl(i d_) { scrl+=d_; if (scrl < 0) scrl=0; }
-v cmdloop() { draw(); }
-v ed(str fn_) { if (!bread(fn_)) return; scrl=0; cmdloop(); }
+v cmdloop() {
+   i q_; c c_; for (q_=0;q_==0;) { draw(); c_=getchar();
+   switch (c_) {
+      case 4: doscrl(lines/2); break; case 21: doscrl(-lines/2); break;
+      case 'q': case EOF: q_=1; break; } } }
+v ed(str fn_) { if (!bread(fn_)) return; scrl=0; cmdloop(); cls(); }
 v dtlines() {
    struct winsize w_; ioctl(0, TIOCGWINSZ, &w_);
    lines = w_.ws_row; cols = w_.ws_col; }
-v raw() { system("stty raw"); }  v unraw() { system("stty cooked"); }
+v raw() { system("stty raw -echo"); }  v unraw() { system("stty cooked echo"); }
 int main(i argc, c **argv) {
    dtlines();
    if (argc != 2) { err("missing file arg"); return 2; }
