@@ -19,8 +19,8 @@ i bread(str fn) {
 i isend(const c *s_) { return s_ >= (b + bs - gs); }
 v cls() { p("\x1B[2J\x1B[H"); }
 v draw() {
-   i r_, c_, i_; c *s_;  r_=c_=0;
-   for (i_=scrl,s_=b; i_>0 && !isend(s_); s_++) if (*s_=='\n') i_--; cls();
+   i r_, c_, i_; c *s_;  r_=c_=0; cls();
+   for (i_=scrl,s_=b; i_>0 && !isend(s_); s_++) if (*s_=='\n') i_--;
    draw: if (isend(s_)) return;
    pc(*s_++); c_++; if (*s_=='\n') { pc('\r'); c_=0; } c_%=cols; if (c_==0) r_++;
    if (r_ <= lines) goto draw; }
