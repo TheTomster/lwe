@@ -1,3 +1,4 @@
+#define s static
 #define i int
 #define c char
 #define v void
