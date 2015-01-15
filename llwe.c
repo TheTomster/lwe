@@ -5,6 +5,7 @@
 #include "defines.h"
 
 s c *b; s i bs, g, gs, lines, cols, scrl;
+typedef struct { i st, e; } tg;
 
 s i bext() {
    gs = bs; bs*=2; b=realloc(b, bs);
@@ -18,13 +19,18 @@ s i bread(str fn) {
    fclose(f_); return 1; fail: fclose(f_); return 0; }
 s i isend(const c *s_) { return s_ >= (b + bs - gs); }
 s v cls() { p("\x1B[2J\x1B[H"); }
+s v winbounds(str *s_, str *e_) {
+   i r_, c_, i_; r_=c_=0;
+   for (i_=scrl,*s_=b; i_>0 && !isend(*s_); (*s_)++) if (**s_=='\n') i_--;
+   *e_=*s_; loop: if (isend(*e_)) return;
+   c_++; if (**e_=='\n') { c_=0; } c_%=cols; if (c_==0) r_++; (*e_)++;
+   if (r_<=lines) goto loop; }
 s v draw() {
-   i r_, c_, i_; c *s_;  r_=c_=0; cls();
-   for (i_=scrl,s_=b; i_>0 && !isend(s_); s_++) if (*s_=='\n') i_--;
-   draw: if (isend(s_)) return;
-   pc(*s_++); c_++; if (*s_=='\n') { pc('\r'); c_=0; } c_%=cols; if (c_==0) r_++;
-   if (r_ <= lines) goto draw; }
+   str s_; str e_; str i_; winbounds(&s_, &e_);
+   cls(); for (i_=s_; i_!=e_; i_++) {
+      pc(*i_); if (*i_=='\n') pc('\r'); } }
 s v doscrl(i d_) { scrl+=d_; if (scrl < 0) scrl=0; }
+s tg trgt() { tg r; r.st=0; r.e=0; return r; }
 s v cmdloop() {
    i q_; c c_; for (q_=0;q_==0;) { draw(); c_=getchar();
    switch (c_) {
