@@ -1,4 +1,5 @@
 /* Extra lite version of LWE (c) 2015 Tom Wright */
+#include <ctype.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <sys/ioctl.h>
@@ -28,7 +29,8 @@ s v winbounds(str *s_, str *e_) {
 s v draw() {
    str s_; str e_; str i_; winbounds(&s_, &e_);
    cls(); for (i_=s_; i_!=e_; i_++) {
-      pc(*i_); if (*i_=='\n') pc('\r'); } }
+      if (isgraph(*i_) || isspace(*i_)) { pc(*i_); } else { pc('?'); }
+      if (*i_=='\n') pc('\r'); } }
 s v doscrl(i d_) { scrl+=d_; if (scrl < 0) scrl=0; }
 s tg trgt() { tg r; r.st=0; r.e=0; return r; }
 s v cmdloop() {
