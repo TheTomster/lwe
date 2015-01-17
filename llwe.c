@@ -26,11 +26,11 @@ s v winbounds(str *s_, str *e_) {
    *e_=*s_; loop: if (isend(*e_)) return;
    c_++; if (**e_=='\n') { c_=0; } c_%=cols; if (c_==0) r_++; (*e_)++;
    if (r_<=lines) goto loop; }
+s v pc(char c_) { if (!isgraph(c_) && !isspace(c_)) c_='?'; printf("%c", c_); }
 s v draw() {
    str s_; str e_; str i_; winbounds(&s_, &e_);
    cls(); for (i_=s_; i_!=e_; i_++) {
-      if (isgraph(*i_) || isspace(*i_)) { pc(*i_); } else { pc('?'); }
-      if (*i_=='\n') pc('\r'); } }
+      pc(*i_); if (*i_=='\n') pc('\r'); } }
 s v doscrl(i d_) { scrl+=d_; if (scrl < 0) scrl=0; }
 s tg trgt() { tg r; r.st=0; r.e=0; return r; }
 s v cmdloop() {
