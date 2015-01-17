@@ -42,7 +42,7 @@ s v ed(str fn_) { if (!bread(fn_)) return; scrl=0; cmdloop(); cls(); }
 s v dtlines() {
    struct winsize w_; ioctl(0, TIOCGWINSZ, &w_);
    lines = w_.ws_row; cols = w_.ws_col; }
-s v raw() { system("stty raw -echo"); }
+s v raw() { system("stty cbreak -echo"); }
 s v unraw() { system("stty cooked echo"); }
 i main(i argc, c **argv) {
    dtlines();
