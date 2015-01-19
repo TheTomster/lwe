@@ -29,15 +29,37 @@ s v winbounds(str *s_, str *e_) {
 s v pc(char c_) { if (!isgraph(c_) && !isspace(c_)) c_='?'; printf("%c", c_); }
 s v draw() {
    str s_; str e_; str i_; winbounds(&s_, &e_);
-   cls(); for (i_=s_; i_!=e_; i_++) {
-      pc(*i_); if (*i_=='\n') pc('\r'); } }
+   cls(); for (i_=s_; i_!=e_; i_++) pc(*i_); }
 s v doscrl(i d_) { scrl+=d_; if (scrl < 0) scrl=0; }
-s tg trgt() { tg r; r.st=0; r.e=0; return r; }
+s str find(c c_) {
+   const c *s_, *e_, *i_; winbounds(&s_, &e_);
+   for(i_=s_; i_!=e_; i_++) if (*i_==c_) return i_;
+   return NULL; }
+s i count(c c_) {
+   i ct_; str i_; str s_; str e_; winbounds(&s_, &e_); ct_=0;
+   for(i_=s_;i_!=e_;i_++) if (*i_==c_) ct_++; return ct_; }
+s v ptarg(i count_) { c a_; a_='a'+(count_%26); p("\x1B[7m"); pc(a_); p("\x1B[0m"); }
+s v drawdisamb(c c_, i lvl_, i off_) {
+   i skip_, count_; const c *s_, *e_, *i_; cls(); winbounds(&s_, &e_); count_=0;
+   for (i_=s_; i_!=e_; i_++)
+      if (*i_==c_) { ptarg(count_); count_++; } else pc(*i_); }
+s str disamb(c c_, i lvl_) {
+   drawdisamb(c_, lvl_, 0);
+   c inp_; inp_=getchar();
+   return 0; }
+s str hunt() {
+   c c_; c_=getchar();
+   if (count(c_)==1) return find(c_);
+   else return disamb(c_, 1); }
+s tg trgt() {
+   tg t_; str s_; s_=hunt();
+   t_.st=0; t_.e=0; return t_; }
 s v cmdloop() {
-   i q_; c c_; for (q_=0;q_==0;) { draw(); c_=getchar();
+   i q_; c c_; tg t_; for (q_=0;q_==0;) { draw(); c_=getchar();
    switch (c_) {
       case 4: doscrl(lines/2); break; case 21: doscrl(-lines/2); break;
-      case 'q': case EOF: q_=1; break; } } }
+      case 'q': case EOF: q_=1; break;
+      case 'i': t_=trgt(); break; } } }
 s v ed(str fn_) { if (!bread(fn_)) return; scrl=0; cmdloop(); cls(); }
 s v dtlines() {
    struct winsize w_; ioctl(0, TIOCGWINSZ, &w_);
