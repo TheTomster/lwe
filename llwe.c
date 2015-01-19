@@ -41,24 +41,26 @@ s i count(c c_) {
 s v ptarg(i count_) {
    c a_; a_='a'+(count_%26); p("\x1B[7m"); pc(a_); p("\x1B[0m"); }
 s v drawdisamb(c c_, i lvl_, i off_) {
-   i skip_, count_; c *s_, *e_, *i_; cls(); winbounds(&s_, &e_); count_=0;
-   for (i_=s_; i_!=e_ && off_>0; i_++) { pc(*i_); if (*i_==c_) off_--; }
-   for (;i_!=e_; i_++)
-      if (*i_==c_) { ptarg(count_++); } else pc(*i_); }
+   c *s_, *e_, *i_; i ct_; cls(); ct_=0; winbounds(&s_, &e_);
+   for (i_=s_; i_<e_; i_++) {
+      if (*i_==c_ && off_>0) { pc(*i_); off_--; }
+      else if (*i_==c_ && off_<=0) { ptarg(ct_++); off_=26*lvl_-1; }
+      else { pc(*i_); } } }
 s c *disamb(c c_, i lvl_, i off_) {
    drawdisamb(c_, lvl_, off_); c inp_; inp_=getchar();
    if (inp_<'a' || inp_>'z') return 0;
-   if (count(c_) < 26*lvl_) return find(c_, inp_-'a');
-   else return disamb(c_, lvl_+1, inp_-'a'); }
+   i i_=inp_-'a';
+   if (count(c_) < 26*lvl_) return find(c_, i_);
+   else return disamb(c_, lvl_+1, i_+off_*26*lvl_); }
 s c *hunt() {
    c c_; c_=getchar();
-   if (count(c_)==1) return find(c_, 0); else return disamb(c_, 1, 0); }
+   if (count(c_)==1) return find(c_, 0); else return disamb(c_, 0, 0); }
 s v cmdloop() {
    i q_; c c_; tg t_; for (q_=0;q_==0;) { draw(); c_=getchar();
    switch (c_) {
       case 4: doscrl(lines/2); break; case 21: doscrl(-lines/2); break;
       case 'q': case EOF: q_=1; break;
-      case 'i': t_.st=hunt(); break; } } }
+      case 'i': t_.st=hunt(); system("stty sane"); exit(1); break; } } }
 s v ed(const c *fn_) { if (!bread(fn_)) return; scrl=0; cmdloop(); cls(); }
 s v dtlines() {
    struct winsize w_; ioctl(0, TIOCGWINSZ, &w_);
