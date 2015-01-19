@@ -5,6 +5,9 @@
 #include <sys/ioctl.h>
 #include "defines.h"
 
+#define C_D 4
+#define C_U 21
+
 s c *b; s i bs, g, gs, lines, cols, scrl;
 typedef struct { c *st, e; } tg;
 
@@ -56,7 +59,7 @@ s c *hunt() {
 s v cmdloop() {
    i q_; c c_; tg t_; for (q_=0;q_==0;) { draw(); c_=getchar();
    switch (c_) {
-      case 4: doscrl(lines/2); break; case 21: doscrl(-lines/2); break;
+      case C_D: doscrl(lines/2); break; case C_U: doscrl(-lines/2); break;
       case 'q': case EOF: q_=1; break;
       case 'i': t_.st=hunt(); break; } } }
 s v ed(const c *fn_) { if (!bread(fn_)) return; scrl=0; cmdloop(); cls(); }
