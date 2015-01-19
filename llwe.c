@@ -25,7 +25,7 @@ s v winbounds(str *s_, str *e_) {
    for (i_=scrl,*s_=b; i_>0 && !isend(*s_); (*s_)++) if (**s_=='\n') i_--;
    *e_=*s_; loop: if (isend(*e_)) return;
    c_++; if (**e_=='\n') { c_=0; } c_%=cols; if (c_==0) r_++; (*e_)++;
-   if (r_<=lines) goto loop; }
+   if (r_<lines) goto loop; else (*e_)--; }
 s v pc(char c_) { if (!isgraph(c_) && !isspace(c_)) c_='?'; printf("%c", c_); }
 s v draw() {
    str s_; str e_; str i_; winbounds(&s_, &e_);
