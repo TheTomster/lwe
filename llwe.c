@@ -78,7 +78,9 @@ s i cmdloop(void) {
       case 'i': t_.st=hunt(); if(t_.st==0) break; if (!insertmode(t_.st)) return 0; break;
       case 'w': if(!bsave(fn)) return 0; break;
       case 'd': t_.st=hunt(); t_.e=hunt(); if (t_.st==0 || t_.e==0) break;
-         delete(t_); break; } }
+         delete(t_); break;
+      case 'c': t_.st=hunt(); t_.e=hunt(); if (t_.st==0 || t_.e==0) break;
+         delete(t_); insertmode(t_.st); break; } }
    return 1; }
 s v ed() { if (!bread()) return; scrl=0; if (cmdloop()) cls(); }
 s v dtlines(void) {
