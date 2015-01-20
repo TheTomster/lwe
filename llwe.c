@@ -25,13 +25,13 @@ s i bput(c c_) { b[g++]=c_; gs--; if (gs==0) return bext(); return 1; }
 s i bins(c c_, c *t_) {
    memmove(t_+1, t_, (b+bs)-t_); *t_=c_; g++; gs--;
    if (gs==0) return bext(); else return 1; }
-s i bread() {
+s i bread(void) {
    c c_; FILE *f_; bs=4096; g=0; gs=bs;
    b=malloc(bs); if (b==NULL) { err("memory"); return 0; }
    f_=fopen(fn, "r"); if (f_==NULL) { err("read"); return 0; }
    for (c_=fgetc(f_);c_!=EOF;c_=fgetc(f_)) if (!bput(c_)) goto fail;
    fclose(f_); return 1; fail: fclose(f_); return 0; }
-s i bsave() {
+s i bsave(void) {
    FILE *f_=fopen(fn, "w"); if (f_==NULL) { err("write"); return 0; }
    fwrite(b, 1, bs-gs, f_); fclose(f_); return 1; }
 s i isend(const c *s_) { return s_ >= (b + bs - gs); }
@@ -87,7 +87,7 @@ s i cmdloop(void) {
       case 'c': t_.st=hunt(); t_.e=hunt(); if (t_.st==0 || t_.e==0) break;
          delete(t_); insertmode(t_.st); break; } }
    return 1; }
-s v ed() { if (!bread()) return; scrl=0; if (cmdloop()) cls(); }
+s v ed(void) { if (!bread()) return; scrl=0; if (cmdloop()) cls(); }
 s v dtlines(void) {
    struct winsize w_; ioctl(0, TIOCGWINSZ, &w_);
    lines = w_.ws_row; cols = w_.ws_col; }
