@@ -60,20 +60,25 @@ s c *disamb(c c_, i lvl_, i off_) {
    drawdisamb(c_, lvl_, off_); c inp_; inp_=getchar(); i i_=inp_-'a';
    return disamb(c_, lvl_+1, off_+i_*skips(lvl_)); }
 s c *hunt(void) {
-   c c_; c_=getchar(); return disamb(c_, 0, 0); }
+   draw(); c c_=getchar(); return disamb(c_, 0, 0); }
 s v rubout(c *t_) { memmove(t_, t_+1, (b+bs)-t_+1); gs++; g--; }
 s i insertmode(c *t_) { c c_; for (;;) { draw(); c_=getchar();
    if (c_==C_D) return 1;
    if (c_==BKSPC) { t_--; rubout(t_); continue; }
    if (!isgraph(c_) && !isspace(c_)) { continue; }
    if (!bins(c_, t_)) return 0; else t_++; } return 1; }
+s v delete(tg t_) {
+   if(t_.e!=b+bs) t_.e++; i n_=b+bs-t_.e; i tn_=t_.e-t_.st;
+   memmove(t_.st, t_.e, n_); g-=tn_; gs+=tn_; }
 s i cmdloop(void) {
    i q_; c c_; tg t_; for (q_=0;q_==0;) { draw(); c_=getchar();
    switch (c_) {
       case C_D: doscrl(lines/2); break; case C_U: doscrl(-lines/2); break;
       case 'q': case EOF: q_=1; break;
-      case 'i': t_.st=hunt(); if (!insertmode(t_.st)) return 0; break;
-      case 'w': if(!bsave(fn)) return 0; break; } }
+      case 'i': t_.st=hunt(); if(t_.st==0) break; if (!insertmode(t_.st)) return 0; break;
+      case 'w': if(!bsave(fn)) return 0; break;
+      case 'd': t_.st=hunt(); t_.e=hunt(); if (t_.st==0 || t_.e==0) break;
+         delete(t_); break; } }
    return 1; }
 s v ed() { if (!bread()) return; scrl=0; if (cmdloop()) cls(); }
 s v dtlines(void) {
