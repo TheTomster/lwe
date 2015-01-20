@@ -10,7 +10,7 @@
 #define C_U 21
 #define BKSPC 127
 
-s c *b, *strt, *end; s i bs, g, gs, lines, cols, scrl;
+s c *fn, *b, *strt, *end; s i bs, g, gs, lines, cols, scrl;
 typedef struct { c *st, *e; } tg;
 
 s i bext(void) {
@@ -20,13 +20,13 @@ s i bput(c c_) { b[g++]=c_; gs--; if (gs==0) return bext(); return 1; }
 s i bins(c c_, c *t_) {
    memmove(t_+1, t_, (b+bs)-t_); *t_=c_; g++; gs--;
    if (gs==0) return bext(); else return 1; }
-s i bread(const c *fn) {
+s i bread() {
    c c_; FILE *f_; bs=4096; g=0; gs=bs;
    b=malloc(bs); if (b==NULL) { err("memory"); return 0; }
    f_=fopen(fn, "r"); if (f_==NULL) { err("read"); return 0; }
    for (c_=fgetc(f_);c_!=EOF;c_=fgetc(f_)) if (!bput(c_)) goto fail;
    fclose(f_); return 1; fail: fclose(f_); return 0; }
-s i bsave(const c *fn) {
+s i bsave() {
    FILE *f_=fopen(fn, "w"); if (f_==NULL) { err("write"); return 0; }
    fwrite(b, 1, bs-gs, f_); fclose(f_); return 1; }
 s i isend(const c *s_) { return s_ >= (b + bs - gs); }
@@ -72,9 +72,10 @@ s i cmdloop(void) {
    switch (c_) {
       case C_D: doscrl(lines/2); break; case C_U: doscrl(-lines/2); break;
       case 'q': case EOF: q_=1; break;
-      case 'i': t_.st=hunt(); if (!insertmode(t_.st)) return 0; break; } }
+      case 'i': t_.st=hunt(); if (!insertmode(t_.st)) return 0; break;
+      case 'w': if(!bsave(fn)) return 0; break; } }
    return 1; }
-s v ed(const c *fn_) { if (!bread(fn_)) return; scrl=0; if (cmdloop()) cls(); bsave(fn_); }
+s v ed() { if (!bread()) return; scrl=0; if (cmdloop()) cls(); }
 s v dtlines(void) {
    struct winsize w_; ioctl(0, TIOCGWINSZ, &w_);
    lines = w_.ws_row; cols = w_.ws_col; }
@@ -83,4 +84,4 @@ s v unraw(void) { system("stty cooked echo"); }
 i main(i argc, c **argv) {
    dtlines();
    if (argc != 2) { err("missing file arg"); return 2; }
-   else { raw(); ed(argv[1]); unraw(); return 0; } }
+   else { raw(); fn=argv[1]; ed(); unraw(); return 0; } }
