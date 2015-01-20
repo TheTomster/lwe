@@ -11,7 +11,6 @@
 #define v void
 #define err(s) fprintf(stderr, "error: " s "\n");
 #define p(s) printf("%s", s);
-
 #define C_D 4
 #define C_U 21
 #define BKSPC 127
