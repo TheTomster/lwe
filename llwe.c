@@ -81,6 +81,8 @@ s i cmdloop(void) {
       case C_D: doscrl(lines/2); break; case C_U: doscrl(-lines/2); break;
       case 'q': case EOF: q_=1; break;
       case 'i': t_.st=hunt(); if(t_.st==0) break; if (!insertmode(t_.st)) return 0; break;
+      case 'a': t_.st=hunt(); if(t_.st==0) break; if(t_.st!=b+bs) t_.st++;
+         if (!insertmode(t_.st)) return 0; break;
       case 'w': if(!bsave()) return 0; break;
       case 'd': t_.st=hunt(); t_.e=hunt(); if (t_.st==0 || t_.e==0) break;
          delete(t_); break;
