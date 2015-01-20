@@ -65,7 +65,7 @@ s c *disamb(c c_, i lvl_, i off_) {
    drawdisamb(c_, lvl_, off_); c inp_; inp_=getchar(); i i_=inp_-'a';
    return disamb(c_, lvl_+1, off_+i_*skips(lvl_)); }
 s c *hunt(void) {
-   draw(); c c_=getchar(); return disamb(c_, 0, 0); }
+   if(gs==bs) return b; draw(); c c_=getchar(); return disamb(c_, 0, 0); }
 s v rubout(c *t_) { memmove(t_, t_+1, (b+bs)-t_+1); gs++; g--; }
 s i insertmode(c *t_) { c c_; for (;;) { draw(); c_=getchar();
    if (c_==C_D) return 1;
