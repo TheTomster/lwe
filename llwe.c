@@ -4,7 +4,13 @@
 #include <stdio.h>
 #include <string.h>
 #include <sys/ioctl.h>
-#include "defines.h"
+
+#define s static
+#define i int
+#define c char
+#define v void
+#define err(s) fprintf(stderr, "error: " s "\n");
+#define p(s) printf("%s", s);
 
 #define C_D 4
 #define C_U 21
