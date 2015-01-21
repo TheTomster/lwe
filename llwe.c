@@ -43,7 +43,9 @@ static int bput(char c_)
 
 static int bins(char c_, char *t_)
 {
-	memmove(t_ + 1, t_, (b + bs) - t_);
+	int sz_;
+	sz_ = g - (t_ - b);
+	memmove(t_ + 1, t_, sz_);
 	*t_ = c_;
 	g++;
 	gs--;
