@@ -176,9 +176,9 @@ static void ptarg(int count_)
 {
 	char a_;
 	a_ = 'a' + (count_ % 26);
-	puts("\x1B[7m");
+	printf("\x1B[7m");
 	pc(a_);
-	puts("\x1B[0m");
+	printf("\x1B[0m");
 }
 
 static int skips(int lvl_)
