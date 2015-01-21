@@ -75,7 +75,7 @@ static int bread(void)
 			goto fail;
 	fclose(f_);
 	return 1;
-      fail:fclose(f_);
+fail:	fclose(f_);
 	return 0;
 }
 
@@ -109,7 +109,7 @@ static void winbounds(void)
 		if (*strt == '\n')
 			i_--;
 	end = strt;
-      loop:if (isend(end))
+loop:	if (isend(end))
 		return;
 	c_++;
 	if (*end == '\n') {
