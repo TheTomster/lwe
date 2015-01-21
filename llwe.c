@@ -248,7 +248,8 @@ static int insertmode(char *t_)
 		if (c_ == C_D)
 			return 1;
 		if (c_ == BKSPC) {
-			if (t_<=b) continue;
+			if (t_ <= b)
+				continue;
 			t_--;
 			rubout(t_);
 			continue;
