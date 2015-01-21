@@ -234,7 +234,9 @@ static char *hunt(void)
 
 static void rubout(char *t_)
 {
-	memmove(t_, t_ + 1, (b + bs) - t_ + 1);
+	int sz_;
+	sz_ = g - (t_ + 1 - b);
+	memmove(t_, t_ + 1, sz_);
 	gs++;
 	g--;
 }
