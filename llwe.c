@@ -177,7 +177,7 @@ static void ptarg(int count_)
 	char a_;
 	a_ = 'a' + (count_ % 26);
 	puts("\x1B[7m");
-	putchar(a_);
+	pc(a_);
 	puts("\x1B[0m");
 }
 
