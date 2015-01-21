@@ -15,7 +15,7 @@ typedef struct {
 	char *st, *e;
 } tg;
 
-static void err(const char * str)
+static void err(const char *str)
 {
 	fprintf(stderr, "error: %s\n", str);
 }
@@ -41,7 +41,7 @@ static int bput(char c_)
 	return 1;
 }
 
-static int bins(char c_, char * t_)
+static int bins(char c_, char *t_)
 {
 	memmove(t_ + 1, t_, (b + bs) - t_);
 	*t_ = c_;
@@ -91,7 +91,7 @@ static int bsave(void)
 	return 1;
 }
 
-static int isend(const char * s_)
+static int isend(const char *s_)
 {
 	return s_ >= (b + bs - gs);
 }
@@ -150,7 +150,7 @@ static void doscrl(int d_)
 
 static char *find(char c_, int n_)
 {
-	for (char * i_ = strt; i_ < end; i_++) {
+	for (char *i_ = strt; i_ < end; i_++) {
 		if (*i_ == c_) {
 			if (n_ <= 0)
 				return i_;
@@ -230,14 +230,14 @@ static char *hunt(void)
 	return disamb(c_, 0, 0);
 }
 
-static void rubout(char * t_)
+static void rubout(char *t_)
 {
 	memmove(t_, t_ + 1, (b + bs) - t_ + 1);
 	gs++;
 	g--;
 }
 
-static int insertmode(char * t_)
+static int insertmode(char *t_)
 {
 	char c_;
 	for (;;) {
@@ -358,7 +358,7 @@ static void unraw(void)
 	system("stty cooked echo");
 }
 
-int main(int argc, char ** argv)
+int main(int argc, char **argv)
 {
 	dtlines();
 	if (argc != 2) {
