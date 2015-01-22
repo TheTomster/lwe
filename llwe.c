@@ -69,8 +69,14 @@ static int bread(void)
 	}
 	f_ = fopen(fn, "r");
 	if (f_ == NULL) {
-		err("read");
-		return 0;
+		fclose(f_);
+		f_ = fopen(fn, "w");
+		fclose(f_);
+		f_ = fopen(fn, "r");
+		if (f_ == NULL) {
+			err("read");
+			return 0;
+		}
 	}
 	for (c_ = fgetc(f_); c_ != EOF; c_ = fgetc(f_))
 		if (!bput(c_))
