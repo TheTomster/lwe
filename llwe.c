@@ -1,16 +1,15 @@
 /* Extra lite version of LWE (c) 2015 Tom Wright */
+#include <curses.h>
 #include <ctype.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include <sys/ioctl.h>
 
 #define C_D 4
 #define C_U 21
-#define BKSPC 127
 
-static char *fn, *b, *strt, *end;
-static int bs, g, gs, lines, cols, scrl;
+static char *filename, *buffer, *start, *end;
+static int bs, g, gs, lines, cols, lwe_scroll;
 typedef struct {
 	char *st, *e;
 } tg;
@@ -24,8 +23,8 @@ static int bext(void)
 {
 	gs = bs;
 	bs *= 2;
-	b = realloc(b, bs);
-	if (b == NULL) {
+	buffer = realloc(buffer, bs);
+	if (buffer == NULL) {
 		err("memory");
 		return 0;
 	}
@@ -34,7 +33,7 @@ static int bext(void)
 
 static int bput(char c_)
 {
-	b[g++] = c_;
+	buffer[g++] = c_;
 	gs--;
 	if (gs == 0)
 		return bext();
@@ -44,7 +43,7 @@ static int bput(char c_)
 static int bins(char c_, char *t_)
 {
 	int sz_;
-	sz_ = g - (t_ - b);
+	sz_ = g - (t_ - buffer);
 	memmove(t_ + 1, t_, sz_);
 	*t_ = c_;
 	g++;
@@ -62,12 +61,12 @@ static int bread(void)
 	bs = 4096;
 	g = 0;
 	gs = bs;
-	b = malloc(bs);
-	if (b == NULL) {
+	buffer = malloc(bs);
+	if (buffer == NULL) {
 		err("memory");
 		return 0;
 	}
-	f_ = fopen(fn, "r");
+	f_ = fopen(filename, "r");
 	if (f_ == NULL) {
 		return 1;
 	}
@@ -82,34 +81,30 @@ fail:	fclose(f_);
 
 static int bsave(void)
 {
-	FILE *f_ = fopen(fn, "w");
+	FILE *f_ = fopen(filename, "w");
 	if (f_ == NULL) {
 		err("write");
 		return 0;
 	}
-	fwrite(b, 1, bs - gs, f_);
+	fwrite(buffer, 1, bs - gs, f_);
 	fclose(f_);
 	return 1;
 }
 
 static int isend(const char *s_)
 {
-	return s_ >= (b + bs - gs);
-}
-
-static void cls(void)
-{
-	printf("\x1B[2J\x1B[H");
+	return s_ >= (buffer + bs - gs);
 }
 
 static void winbounds(void)
 {
 	int r_, c_, i_;
 	r_ = c_ = 0;
-	for (i_ = scrl, strt = b; i_ > 0 && !isend(strt); (strt)++)
-		if (*strt == '\n')
+	for (i_ = lwe_scroll, start = buffer; i_ > 0 && !isend(start);
+	     (start)++)
+		if (*start == '\n')
 			i_--;
-	end = strt;
+	end = start;
 loop:	if (isend(end))
 		return;
 	c_++;
@@ -130,28 +125,30 @@ static void pc(char c_)
 {
 	if (!isgraph(c_) && !isspace(c_))
 		c_ = '?';
-	printf("%c", c_);
+	addch(c_);
 }
 
 static void draw(void)
 {
 	char *i_;
-	cls();
+	erase();
+	move(0, 0);
 	winbounds();
-	for (i_ = strt; i_ != end; i_++)
+	for (i_ = start; i_ != end; i_++)
 		pc(*i_);
+	refresh();
 }
 
 static void doscrl(int d_)
 {
-	scrl += d_;
-	if (scrl < 0)
-		scrl = 0;
+	lwe_scroll += d_;
+	if (lwe_scroll < 0)
+		lwe_scroll = 0;
 }
 
 static char *find(char c_, int n_)
 {
-	for (char *i_ = strt; i_ < end; i_++) {
+	for (char *i_ = start; i_ < end; i_++) {
 		if (*i_ == c_) {
 			if (n_ <= 0)
 				return i_;
@@ -167,7 +164,7 @@ static int count(char c_)
 	int ct_;
 	char *i_;
 	ct_ = 0;
-	for (i_ = strt; i_ != end; i_++)
+	for (i_ = start; i_ != end; i_++)
 		if (*i_ == c_)
 			ct_++;
 	return ct_;
@@ -177,9 +174,9 @@ static void ptarg(int count_)
 {
 	char a_;
 	a_ = 'a' + (count_ % 26);
-	printf("\x1B[7m");
+	attron(A_STANDOUT);
 	pc(a_);
-	printf("\x1B[0m");
+	attroff(A_STANDOUT);
 }
 
 static int skips(int lvl_)
@@ -194,9 +191,10 @@ static void drawdisamb(char c_, int lvl_, int off_)
 {
 	char *i_;
 	int ct_;
-	cls();
+	erase();
+	move(0, 0);
 	ct_ = 0;
-	for (i_ = strt; i_ < end; i_++) {
+	for (i_ = start; i_ < end; i_++) {
 		if (*i_ == c_ && off_ > 0) {
 			pc(*i_);
 			off_--;
@@ -207,6 +205,7 @@ static void drawdisamb(char c_, int lvl_, int off_)
 			pc(*i_);
 		}
 	}
+	refresh();
 }
 
 static char *disamb(char c_, int lvl_, int off_)
@@ -215,7 +214,7 @@ static char *disamb(char c_, int lvl_, int off_)
 		return find(c_, off_);
 	drawdisamb(c_, lvl_, off_);
 	char inp_;
-	inp_ = getchar();
+	inp_ = getch();
 	int i_ = inp_ - 'a';
 	if (i_ < 0 || i_ > 26)
 		return 0;
@@ -225,16 +224,16 @@ static char *disamb(char c_, int lvl_, int off_)
 static char *hunt(void)
 {
 	if (gs == bs)
-		return b;
+		return buffer;
 	draw();
-	char c_ = getchar();
+	char c_ = getch();
 	return disamb(c_, 0, 0);
 }
 
 static void rubout(char *t_)
 {
 	int sz_;
-	sz_ = g - (t_ + 1 - b);
+	sz_ = g - (t_ + 1 - buffer);
 	memmove(t_, t_ + 1, sz_);
 	gs++;
 	g--;
@@ -242,14 +241,16 @@ static void rubout(char *t_)
 
 static int insertmode(char *t_)
 {
-	char c_;
+	int c_;
 	for (;;) {
 		draw();
-		c_ = getchar();
+		c_ = getch();
+		if (c_ == '\r')
+			c_ = '\n';
 		if (c_ == C_D)
 			return 1;
-		if (c_ == BKSPC) {
-			if (t_ <= b)
+		if (c_ == KEY_BACKSPACE) {
+			if (t_ <= buffer)
 				continue;
 			t_--;
 			rubout(t_);
@@ -268,9 +269,9 @@ static int insertmode(char *t_)
 
 static void delete(tg t_)
 {
-	if (t_.e != b + bs)
+	if (t_.e != buffer + bs)
 		t_.e++;
-	int n_ = b + bs - t_.e;
+	int n_ = buffer + bs - t_.e;
 	int tn_ = t_.e - t_.st;
 	memmove(t_.st, t_.e, n_);
 	g -= tn_;
@@ -284,7 +285,7 @@ static int cmdloop(void)
 	tg t_;
 	for (q_ = 0; q_ == 0;) {
 		draw();
-		c_ = getchar();
+		c_ = getch();
 		switch (c_) {
 		case C_D:
 			doscrl(lines / 2);
@@ -307,7 +308,7 @@ static int cmdloop(void)
 			t_.st = hunt();
 			if (t_.st == 0)
 				break;
-			if (t_.st != b + bs)
+			if (t_.st != buffer + bs)
 				t_.st++;
 			if (!insertmode(t_.st))
 				return 0;
@@ -340,40 +341,25 @@ static void ed(void)
 {
 	if (!bread())
 		return;
-	scrl = 0;
-	if (cmdloop())
-		cls();
-}
-
-static void dtlines(void)
-{
-	struct winsize w_;
-	ioctl(0, TIOCGWINSZ, &w_);
-	lines = w_.ws_row;
-	cols = w_.ws_col;
-}
-
-static void raw(void)
-{
-	system("stty cbreak -echo");
-}
-
-static void unraw(void)
-{
-	system("stty cooked echo");
+	lwe_scroll = 0;
+	cmdloop();
 }
 
 int main(int argc, char **argv)
 {
-	dtlines();
 	if (argc != 2) {
 		err("missing file arg");
 		return 2;
 	} else {
-		raw();
-		fn = argv[1];
+		initscr();
+		cbreak();
+		nonl();
+		intrflush(stdscr, FALSE);
+		keypad(stdscr, TRUE);
+		getmaxyx(stdscr, lines, cols);
+		filename = argv[1];
 		ed();
-		unraw();
+		endwin();
 		return 0;
 	}
 }
