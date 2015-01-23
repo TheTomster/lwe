@@ -1,0 +1,37 @@
+diff --git a/llwe.c b/llwe.c
+index 48598c9..f402e47 100644
+--- a/llwe.c
++++ b/llwe.c
+@@ -256,7 +256,7 @@ static int insertmode(char *t)
+ 			c = '\n';
+ 		if (c == C_D)
+ 			return 1;
+-		if (c == KEY_BACKSPACE) {
++		if (c == '\b') {
+ 			if (t <= buffer)
+ 				continue;
+ 			t--;
+@@ -294,14 +294,10 @@ static int cmdloop(void)
+ 		c = getch();
+ 		switch (c) {
+ 		case C_D:
+-		case KEY_DOWN:
+-		case KEY_NPAGE:
+ 		case 'j':
+ 			doscrl(LINES / 2);
+ 			break;
+ 		case C_U:
+-		case KEY_UP:
+-		case KEY_PPAGE:
+ 		case 'k':
+ 			doscrl(-LINES / 2);
+ 			break;
+@@ -370,8 +366,6 @@ int main(int argc, char **argv)
+ 		cbreak();
+ 		noecho();
+ 		nonl();
+-		intrflush(stdscr, FALSE);
+-		keypad(stdscr, TRUE);
+ 		filename = argv[1];
+ 		ed();
+ 		endwin();
