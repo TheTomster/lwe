@@ -286,17 +286,22 @@ static void delete(target t)
 
 static int cmdloop(void)
 {
-	int q;
-	char c;
+	int q, c;
 	target t;
 	for (q = 0; q == 0;) {
 		draw();
 		c = getch();
 		switch (c) {
 		case C_D:
+		case KEY_DOWN:
+		case KEY_NPAGE:
+		case 'j':
 			doscrl(lines / 2);
 			break;
 		case C_U:
+		case KEY_UP:
+		case KEY_PPAGE:
+		case 'k':
 			doscrl(-lines / 2);
 			break;
 		case 'q':
