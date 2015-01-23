@@ -2,7 +2,7 @@ CFLAGS=-Wall -Wextra -std=c99 -g
 LDFLAGS=-lcurses
 llwe:
 llwe: llwe.c
-	$(CC) $(CFLAGS) $(LDFLAGS) llwe.c -o llwe
+	$(CC) -o llwe llwe.c $(CFLAGS) $(LDFLAGS)
 
 .PHONY: release
 release: CFLAGS=-Wall -Wextra -std=c99 -Os -s
