@@ -9,10 +9,10 @@
 #define C_U 21
 
 static char *filename, *buffer, *start, *end;
-static int bs, g, gs, lines, cols, lwe_scroll;
+static int bufsize, gap, gapsize, lines, cols, lwe_scroll;
 typedef struct {
-	char *st, *e;
-} tg;
+	char *start, *end;
+} target;
 
 static void err(const char *str)
 {
@@ -21,9 +21,9 @@ static void err(const char *str)
 
 static int bext(void)
 {
-	gs = bs;
-	bs *= 2;
-	buffer = realloc(buffer, bs);
+	gapsize = bufsize;
+	bufsize *= 2;
+	buffer = realloc(buffer, bufsize);
 	if (buffer == NULL) {
 		err("memory");
 		return 0;
@@ -31,24 +31,24 @@ static int bext(void)
 	return 1;
 }
 
-static int bput(char c_)
+static int bput(char c)
 {
-	buffer[g++] = c_;
-	gs--;
-	if (gs == 0)
+	buffer[gap++] = c;
+	gapsize--;
+	if (gapsize == 0)
 		return bext();
 	return 1;
 }
 
-static int bins(char c_, char *t_)
+static int bins(char c, char *t)
 {
-	int sz_;
-	sz_ = g - (t_ - buffer);
-	memmove(t_ + 1, t_, sz_);
-	*t_ = c_;
-	g++;
-	gs--;
-	if (gs == 0)
+	int sz;
+	sz = gap - (t - buffer);
+	memmove(t + 1, t, sz);
+	*t = c;
+	gap++;
+	gapsize--;
+	if (gapsize == 0)
 		return bext();
 	else
 		return 1;
@@ -56,237 +56,237 @@ static int bins(char c_, char *t_)
 
 static int bread(void)
 {
-	char c_;
-	FILE *f_;
-	bs = 4096;
-	g = 0;
-	gs = bs;
-	buffer = malloc(bs);
+	char c;
+	FILE *f;
+	bufsize = 4096;
+	gap = 0;
+	gapsize = bufsize;
+	buffer = malloc(bufsize);
 	if (buffer == NULL) {
 		err("memory");
 		return 0;
 	}
-	f_ = fopen(filename, "r");
-	if (f_ == NULL) {
+	f = fopen(filename, "r");
+	if (f == NULL) {
 		return 1;
 	}
-	for (c_ = fgetc(f_); c_ != EOF; c_ = fgetc(f_))
-		if (!bput(c_))
+	for (c = fgetc(f); c != EOF; c = fgetc(f))
+		if (!bput(c))
 			goto fail;
-	fclose(f_);
+	fclose(f);
 	return 1;
-fail:	fclose(f_);
+fail:	fclose(f);
 	return 0;
 }
 
 static int bsave(void)
 {
-	FILE *f_ = fopen(filename, "w");
-	if (f_ == NULL) {
+	FILE *f = fopen(filename, "w");
+	if (f == NULL) {
 		err("write");
 		return 0;
 	}
-	fwrite(buffer, 1, bs - gs, f_);
-	fclose(f_);
+	fwrite(buffer, 1, bufsize - gapsize, f);
+	fclose(f);
 	return 1;
 }
 
-static int isend(const char *s_)
+static int isend(const char *s)
 {
-	return s_ >= (buffer + bs - gs);
+	return s >= (buffer + bufsize - gapsize);
 }
 
 static void winbounds(void)
 {
-	int r_, c_, i_;
-	r_ = c_ = 0;
-	for (i_ = lwe_scroll, start = buffer; i_ > 0 && !isend(start);
+	int r, c, i;
+	r = c = 0;
+	for (i = lwe_scroll, start = buffer; i > 0 && !isend(start);
 	     (start)++)
 		if (*start == '\n')
-			i_--;
+			i--;
 	end = start;
 loop:	if (isend(end))
 		return;
-	c_++;
+	c++;
 	if (*end == '\n') {
-		c_ = 0;
+		c = 0;
 	}
-	c_ %= cols;
-	if (c_ == 0)
-		r_++;
+	c %= cols;
+	if (c == 0)
+		r++;
 	end++;
-	if (r_ < lines)
+	if (r < lines)
 		goto loop;
 	else
 		end--;
 }
 
-static void pc(char c_)
+static void pc(char c)
 {
-	if (!isgraph(c_) && !isspace(c_))
-		c_ = '?';
-	addch(c_);
+	if (!isgraph(c) && !isspace(c))
+		c = '?';
+	addch(c);
 }
 
 static void draw(void)
 {
-	char *i_;
+	char *i;
 	erase();
 	move(0, 0);
 	winbounds();
-	for (i_ = start; i_ != end; i_++)
-		pc(*i_);
+	for (i = start; i != end; i++)
+		pc(*i);
 	refresh();
 }
 
-static void doscrl(int d_)
+static void doscrl(int d)
 {
-	lwe_scroll += d_;
+	lwe_scroll += d;
 	if (lwe_scroll < 0)
 		lwe_scroll = 0;
 }
 
-static char *find(char c_, int n_)
+static char *find(char c, int n)
 {
-	for (char *i_ = start; i_ < end; i_++) {
-		if (*i_ == c_) {
-			if (n_ <= 0)
-				return i_;
+	for (char *i = start; i < end; i++) {
+		if (*i == c) {
+			if (n <= 0)
+				return i;
 			else
-				n_--;
+				n--;
 		}
 	}
 	return 0;
 }
 
-static int count(char c_)
+static int count(char c)
 {
-	int ct_;
-	char *i_;
-	ct_ = 0;
-	for (i_ = start; i_ != end; i_++)
-		if (*i_ == c_)
-			ct_++;
-	return ct_;
+	int ct;
+	char *i;
+	ct = 0;
+	for (i = start; i != end; i++)
+		if (*i == c)
+			ct++;
+	return ct;
 }
 
-static void ptarg(int count_)
+static void ptarg(int count)
 {
-	char a_;
-	a_ = 'a' + (count_ % 26);
+	char a;
+	a = 'a' + (count % 26);
 	attron(A_STANDOUT);
-	pc(a_);
+	pc(a);
 	attroff(A_STANDOUT);
 }
 
-static int skips(int lvl_)
+static int skips(int lvl)
 {
-	int i_;
-	for (i_ = 1; lvl_ > 0; lvl_--)
-		i_ *= 26;
-	return i_;
+	int i;
+	for (i = 1; lvl > 0; lvl--)
+		i *= 26;
+	return i;
 }
 
-static void drawdisamb(char c_, int lvl_, int off_)
+static void drawdisamb(char c, int lvl, int off)
 {
-	char *i_;
-	int ct_;
+	char *i;
+	int ct;
 	erase();
 	move(0, 0);
-	ct_ = 0;
-	for (i_ = start; i_ < end; i_++) {
-		if (*i_ == c_ && off_ > 0) {
-			pc(*i_);
-			off_--;
-		} else if (*i_ == c_ && off_ <= 0) {
-			ptarg(ct_++);
-			off_ = skips(lvl_) - 1;
+	ct = 0;
+	for (i = start; i < end; i++) {
+		if (*i == c && off > 0) {
+			pc(*i);
+			off--;
+		} else if (*i == c && off <= 0) {
+			ptarg(ct++);
+			off = skips(lvl) - 1;
 		} else {
-			pc(*i_);
+			pc(*i);
 		}
 	}
 	refresh();
 }
 
-static char *disamb(char c_, int lvl_, int off_)
+static char *disamb(char c, int lvl, int off)
 {
-	if (count(c_) - off_ <= skips(lvl_))
-		return find(c_, off_);
-	drawdisamb(c_, lvl_, off_);
-	char inp_;
-	inp_ = getch();
-	int i_ = inp_ - 'a';
-	if (i_ < 0 || i_ > 26)
+	if (count(c) - off <= skips(lvl))
+		return find(c, off);
+	drawdisamb(c, lvl, off);
+	char inp;
+	inp = getch();
+	int i = inp - 'a';
+	if (i < 0 || i > 26)
 		return 0;
-	return disamb(c_, lvl_ + 1, off_ + i_ * skips(lvl_));
+	return disamb(c, lvl + 1, off + i * skips(lvl));
 }
 
 static char *hunt(void)
 {
-	if (gs == bs)
+	if (gapsize == bufsize)
 		return buffer;
 	draw();
-	char c_ = getch();
-	return disamb(c_, 0, 0);
+	char c = getch();
+	return disamb(c, 0, 0);
 }
 
-static void rubout(char *t_)
+static void rubout(char *t)
 {
-	int sz_;
-	sz_ = g - (t_ + 1 - buffer);
-	memmove(t_, t_ + 1, sz_);
-	gs++;
-	g--;
+	int sz;
+	sz = gap - (t + 1 - buffer);
+	memmove(t, t + 1, sz);
+	gapsize++;
+	gap--;
 }
 
-static int insertmode(char *t_)
+static int insertmode(char *t)
 {
-	int c_;
+	int c;
 	for (;;) {
 		draw();
-		c_ = getch();
-		if (c_ == '\r')
-			c_ = '\n';
-		if (c_ == C_D)
+		c = getch();
+		if (c == '\r')
+			c = '\n';
+		if (c == C_D)
 			return 1;
-		if (c_ == KEY_BACKSPACE) {
-			if (t_ <= buffer)
+		if (c == KEY_BACKSPACE) {
+			if (t <= buffer)
 				continue;
-			t_--;
-			rubout(t_);
+			t--;
+			rubout(t);
 			continue;
 		}
-		if (!isgraph(c_) && !isspace(c_)) {
+		if (!isgraph(c) && !isspace(c)) {
 			continue;
 		}
-		if (!bins(c_, t_))
+		if (!bins(c, t))
 			return 0;
 		else
-			t_++;
+			t++;
 	}
 	return 1;
 }
 
-static void delete(tg t_)
+static void delete(target t)
 {
-	if (t_.e != buffer + bs)
-		t_.e++;
-	int n_ = buffer + bs - t_.e;
-	int tn_ = t_.e - t_.st;
-	memmove(t_.st, t_.e, n_);
-	g -= tn_;
-	gs += tn_;
+	if (t.end != buffer + bufsize)
+		t.end++;
+	int n = buffer + bufsize - t.end;
+	int tn = t.end - t.start;
+	memmove(t.start, t.end, n);
+	gap -= tn;
+	gapsize += tn;
 }
 
 static int cmdloop(void)
 {
-	int q_;
-	char c_;
-	tg t_;
-	for (q_ = 0; q_ == 0;) {
+	int q;
+	char c;
+	target t;
+	for (q = 0; q == 0;) {
 		draw();
-		c_ = getch();
-		switch (c_) {
+		c = getch();
+		switch (c) {
 		case C_D:
 			doscrl(lines / 2);
 			break;
@@ -295,22 +295,22 @@ static int cmdloop(void)
 			break;
 		case 'q':
 		case EOF:
-			q_ = 1;
+			q = 1;
 			break;
 		case 'i':
-			t_.st = hunt();
-			if (t_.st == 0)
+			t.start = hunt();
+			if (t.start == 0)
 				break;
-			if (!insertmode(t_.st))
+			if (!insertmode(t.start))
 				return 0;
 			break;
 		case 'a':
-			t_.st = hunt();
-			if (t_.st == 0)
+			t.start = hunt();
+			if (t.start == 0)
 				break;
-			if (t_.st != buffer + bs)
-				t_.st++;
-			if (!insertmode(t_.st))
+			if (t.start != buffer + bufsize)
+				t.start++;
+			if (!insertmode(t.start))
 				return 0;
 			break;
 		case 'w':
@@ -318,19 +318,19 @@ static int cmdloop(void)
 				return 0;
 			break;
 		case 'd':
-			t_.st = hunt();
-			t_.e = hunt();
-			if (t_.st == 0 || t_.e == 0)
+			t.start = hunt();
+			t.end = hunt();
+			if (t.start == 0 || t.end == 0)
 				break;
-			delete(t_);
+			delete(t);
 			break;
 		case 'c':
-			t_.st = hunt();
-			t_.e = hunt();
-			if (t_.st == 0 || t_.e == 0)
+			t.start = hunt();
+			t.end = hunt();
+			if (t.start == 0 || t.end == 0)
 				break;
-			delete(t_);
-			insertmode(t_.st);
+			delete(t);
+			insertmode(t.start);
 			break;
 		}
 	}
