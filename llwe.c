@@ -79,6 +79,12 @@ fail:	fclose(f);
 	return 0;
 }
 
+int breload()
+{
+	free(buffer);
+	return bread();
+}
+
 static int bsave(void)
 {
 	FILE *f = fopen(filename, "w");
@@ -331,6 +337,9 @@ static int cmdloop(void)
 				break;
 			delete(t);
 			insertmode(t.start);
+			break;
+		case 'r':
+			breload();
 			break;
 		}
 	}
