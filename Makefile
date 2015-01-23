@@ -5,7 +5,7 @@ llwe: llwe.c
 	$(CC) $(CFLAGS) $(LDFLAGS) llwe.c -o llwe
 
 .PHONY: release
-release: CFLAGS=-Wall -Wextra -std=c99 -Os -flto -s
+release: CFLAGS=-Wall -Wextra -std=c99 -Os -s
 release: llwe
 
 .PHONY: indent
