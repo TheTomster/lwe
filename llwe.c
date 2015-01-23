@@ -9,7 +9,7 @@
 #define C_U 21
 
 static char *filename, *buffer, *start, *end;
-static int bufsize, gap, gapsize, lines, cols, lwe_scroll;
+static int bufsize, gap, gapsize, lwe_scroll;
 typedef struct {
 	char *start, *end;
 } target;
@@ -117,11 +117,11 @@ loop:	if (isend(end))
 	if (*end == '\n') {
 		c = 0;
 	}
-	c %= cols;
+	c %= COLS;
 	if (c == 0)
 		r++;
 	end++;
-	if (r < lines)
+	if (r < LINES)
 		goto loop;
 	else
 		end--;
@@ -147,6 +147,7 @@ static void draw(void)
 
 static void doscrl(int d)
 {
+	clear();
 	lwe_scroll += d;
 	if (lwe_scroll < 0)
 		lwe_scroll = 0;
@@ -296,13 +297,13 @@ static int cmdloop(void)
 		case KEY_DOWN:
 		case KEY_NPAGE:
 		case 'j':
-			doscrl(lines / 2);
+			doscrl(LINES / 2);
 			break;
 		case C_U:
 		case KEY_UP:
 		case KEY_PPAGE:
 		case 'k':
-			doscrl(-lines / 2);
+			doscrl(-LINES / 2);
 			break;
 		case 'q':
 		case EOF:
@@ -367,10 +368,10 @@ int main(int argc, char **argv)
 	} else {
 		initscr();
 		cbreak();
+		noecho();
 		nonl();
 		intrflush(stdscr, FALSE);
 		keypad(stdscr, TRUE);
-		getmaxyx(stdscr, lines, cols);
 		filename = argv[1];
 		ed();
 		endwin();
