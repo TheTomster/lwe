@@ -152,9 +152,29 @@ static void doscrl(int d)
 		lwe_scroll = 0;
 }
 
+static void jumptoline(void)
+{
+	char buf[32], c;
+	int i;
+	memset(buf, '\0', 32);
+	for (i = 0; i < 32; i++) {
+		c = getch();
+		if (isdigit(c))
+			buf[i] = c;
+		else
+			break;
+	}
+	i = atoi(buf);
+	if (i == 0)
+		return;
+	lwe_scroll = i;
+	doscrl(-LINES / 2);
+}
+
 static char *find(char c, int n)
 {
-	for (char *i = start; i < end; i++) {
+	char *i;
+	for (i = start; i < end; i++) {
 		if (*i == c) {
 			if (n <= 0)
 				return i;
@@ -216,12 +236,13 @@ static void drawdisamb(char c, int lvl, int off)
 
 static char *disamb(char c, int lvl, int off)
 {
+	char inp;
+	int i;
 	if (count(c) - off <= skips(lvl))
 		return find(c, off);
 	drawdisamb(c, lvl, off);
-	char inp;
 	inp = getch();
-	int i = inp - 'a';
+	i = inp - 'a';
 	if (i < 0 || i > 26)
 		return 0;
 	return disamb(c, lvl + 1, off + i * skips(lvl));
@@ -229,10 +250,11 @@ static char *disamb(char c, int lvl, int off)
 
 static char *hunt(void)
 {
+	char c;
 	if (gapsize == bufsize)
 		return buffer;
 	draw();
-	char c = getch();
+	c = getch();
 	return disamb(c, 0, 0);
 }
 
@@ -275,10 +297,11 @@ static int insertmode(char *t)
 
 static void delete(target t)
 {
+	int n, tn;
 	if (t.end != buffer + bufsize)
 		t.end++;
-	int n = buffer + bufsize - t.end;
-	int tn = t.end - t.start;
+	n = buffer + bufsize - t.end;
+	tn = t.end - t.start;
 	memmove(t.start, t.end, n);
 	gap -= tn;
 	gapsize += tn;
@@ -345,6 +368,9 @@ static int cmdloop(void)
 			break;
 		case 'r':
 			breload();
+			break;
+		case 'g':
+			jumptoline();
 			break;
 		}
 	}

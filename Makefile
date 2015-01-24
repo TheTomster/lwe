@@ -1,11 +1,11 @@
-CFLAGS=-Wall -Wextra -std=c99 -g
+CFLAGS=-Wall -Wextra -pedantic -std=c89 -g
 LDFLAGS=-lcurses
 llwe:
 llwe: llwe.c
 	$(CC) -o llwe llwe.c $(CFLAGS) $(LDFLAGS)
 
 .PHONY: release
-release: CFLAGS=-Wall -Wextra -std=c99 -Os -s
+release: CFLAGS=-Wall -Wextra -pedantic -std=c89 -Os -s
 release: llwe
 
 .PHONY: indent
