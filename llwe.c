@@ -1,4 +1,4 @@
-/* Extra lite version of LWE (c) 2015 Tom Wright */
+/* A unique cursorless text editor. (c) 2015 Tom Wright */
 #include <curses.h>
 #include <ctype.h>
 #include <stdlib.h>
