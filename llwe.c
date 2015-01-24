@@ -147,7 +147,6 @@ static void draw(void)
 
 static void doscrl(int d)
 {
-	clear();
 	lwe_scroll += d;
 	if (lwe_scroll < 0)
 		lwe_scroll = 0;

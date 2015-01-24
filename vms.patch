@@ -1,5 +1,5 @@
 diff --git a/llwe.c b/llwe.c
-index 48598c9..01e33be 100644
+index 9307fc7..01e33be 100644
 --- a/llwe.c
 +++ b/llwe.c
 @@ -121,7 +121,7 @@ loop:	if (isend(end))
@@ -11,7 +11,15 @@ index 48598c9..01e33be 100644
  		goto loop;
  	else
  		end--;
-@@ -256,7 +256,7 @@ static int insertmode(char *t)
+@@ -147,6 +147,7 @@ static void draw(void)
+ 
+ static void doscrl(int d)
+ {
++	clear();
+ 	lwe_scroll += d;
+ 	if (lwe_scroll < 0)
+ 		lwe_scroll = 0;
+@@ -255,7 +256,7 @@ static int insertmode(char *t)
  			c = '\n';
  		if (c == C_D)
  			return 1;
@@ -20,7 +28,7 @@ index 48598c9..01e33be 100644
  			if (t <= buffer)
  				continue;
  			t--;
-@@ -294,14 +294,10 @@ static int cmdloop(void)
+@@ -293,14 +294,10 @@ static int cmdloop(void)
  		c = getch();
  		switch (c) {
  		case C_D:
@@ -35,7 +43,7 @@ index 48598c9..01e33be 100644
  		case 'k':
  			doscrl(-LINES / 2);
  			break;
-@@ -370,8 +366,6 @@ int main(int argc, char **argv)
+@@ -369,8 +366,6 @@ int main(int argc, char **argv)
  		cbreak();
  		noecho();
  		nonl();
