@@ -271,6 +271,8 @@ static int insertmode(char *t)
 {
 	int c;
 	for (;;) {
+		if (t > end)
+			doscrl(LINES / 2);
 		draw();
 		c = getch();
 		if (c == '\r')
