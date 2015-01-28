@@ -1,8 +1,7 @@
 CFLAGS=-Wall -Wextra -pedantic -std=c89 -g
-LDFLAGS=-lcurses
+LDLIBS=-lcurses
 llwe:
 llwe: llwe.c
-	$(CC) -o llwe llwe.c $(CFLAGS) $(LDFLAGS)
 
 .PHONY: release
 release: CFLAGS=-Wall -Wextra -pedantic -std=c89 -O3 -s
