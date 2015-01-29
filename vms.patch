@@ -1,7 +1,25 @@
 diff --git a/llwe.c b/llwe.c
-index 9307fc7..01e33be 100644
+index 0e6aded..3a24f28 100644
 --- a/llwe.c
 +++ b/llwe.c
+@@ -66,7 +66,7 @@ static int bread(void)
+ 		err("memory");
+ 		return 0;
+ 	}
+-	f = fopen(filename, "r");
++	f = fopen(filename, "r", "ctx=stm");
+ 	if (f == NULL) {
+ 		return 1;
+ 	}
+@@ -87,7 +87,7 @@ int breload()
+ 
+ static int bsave(void)
+ {
+-	FILE *f = fopen(filename, "w");
++	FILE *f = fopen(filename, "w", "ctx=stm");
+ 	if (f == NULL) {
+ 		err("write");
+ 		return 0;
 @@ -121,7 +121,7 @@ loop:	if (isend(end))
  	if (c == 0)
  		r++;
@@ -19,7 +37,7 @@ index 9307fc7..01e33be 100644
  	lwe_scroll += d;
  	if (lwe_scroll < 0)
  		lwe_scroll = 0;
-@@ -255,7 +256,7 @@ static int insertmode(char *t)
+@@ -279,7 +280,7 @@ static int insertmode(char *t)
  			c = '\n';
  		if (c == C_D)
  			return 1;
@@ -28,7 +46,7 @@ index 9307fc7..01e33be 100644
  			if (t <= buffer)
  				continue;
  			t--;
-@@ -293,14 +294,10 @@ static int cmdloop(void)
+@@ -318,14 +319,10 @@ static int cmdloop(void)
  		c = getch();
  		switch (c) {
  		case C_D:
@@ -43,7 +61,7 @@ index 9307fc7..01e33be 100644
  		case 'k':
  			doscrl(-LINES / 2);
  			break;
-@@ -369,8 +366,6 @@ int main(int argc, char **argv)
+@@ -397,8 +394,6 @@ int main(int argc, char **argv)
  		cbreak();
  		noecho();
  		nonl();
