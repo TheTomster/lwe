@@ -9,6 +9,7 @@
 #define C_U 21
 
 static char *filename, *buffer, *start, *end;
+char errbuf[256];
 static int bufsize, gap, gapsize, lwe_scroll;
 typedef struct {
 	char *start, *end;
@@ -16,7 +17,7 @@ typedef struct {
 
 static void err(const char *str)
 {
-	fprintf(stderr, "error: %s\n", str);
+	snprintf(errbuf, sizeof(errbuf), "%s", str);
 }
 
 static int bext(void)
@@ -402,6 +403,8 @@ int main(int argc, char **argv)
 		filename = argv[1];
 		ed();
 		endwin();
+		if (strcmp(errbuf, ""))
+			fprintf(stderr, "error: %s\n", errbuf);
 		return 0;
 	}
 }
