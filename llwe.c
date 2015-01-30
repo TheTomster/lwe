@@ -15,12 +15,14 @@ typedef struct {
 	char *start, *end;
 } target;
 
-static void err(const char *str)
+static void
+err(const char *str)
 {
 	snprintf(errbuf, sizeof(errbuf), "%s", str);
 }
 
-static int bext(void)
+static int
+bext(void)
 {
 	gapsize = bufsize;
 	bufsize *= 2;
@@ -32,7 +34,8 @@ static int bext(void)
 	return 1;
 }
 
-static int bput(char c)
+static int
+bput(char c)
 {
 	buffer[gap++] = c;
 	gapsize--;
@@ -41,7 +44,8 @@ static int bput(char c)
 	return 1;
 }
 
-static int bins(char c, char *t)
+static int
+bins(char c, char *t)
 {
 	int sz;
 	sz = gap - (t - buffer);
@@ -55,7 +59,8 @@ static int bins(char c, char *t)
 		return 1;
 }
 
-static int bread(void)
+static int
+bread(void)
 {
 	char c;
 	FILE *f;
@@ -80,13 +85,15 @@ fail:	fclose(f);
 	return 0;
 }
 
-int breload()
+int
+breload()
 {
 	free(buffer);
 	return bread();
 }
 
-static int bsave(void)
+static int
+bsave(void)
 {
 	FILE *f = fopen(filename, "w");
 	if (f == NULL) {
@@ -98,12 +105,14 @@ static int bsave(void)
 	return 1;
 }
 
-static int isend(const char *s)
+static int
+isend(const char *s)
 {
 	return s >= (buffer + bufsize - gapsize);
 }
 
-static void winbounds(void)
+static void
+winbounds(void)
 {
 	int r, c, i;
 	r = c = 0;
@@ -128,14 +137,16 @@ loop:	if (isend(end))
 		end--;
 }
 
-static void pc(char c)
+static void
+pc(char c)
 {
 	if (!isgraph(c) && !isspace(c))
 		c = '?';
 	addch(c);
 }
 
-static void draw(void)
+static void
+draw(void)
 {
 	char *i;
 	erase();
@@ -146,14 +157,16 @@ static void draw(void)
 	refresh();
 }
 
-static void doscrl(int d)
+static void
+doscrl(int d)
 {
 	lwe_scroll += d;
 	if (lwe_scroll < 0)
 		lwe_scroll = 0;
 }
 
-static void jumptoline(void)
+static void
+jumptoline(void)
 {
 	char buf[32], c;
 	int i;
@@ -172,7 +185,8 @@ static void jumptoline(void)
 	doscrl(-LINES / 2);
 }
 
-static char *find(char c, int n)
+static char *
+find(char c, int n)
 {
 	char *i;
 	for (i = start; i < end; i++) {
@@ -186,7 +200,8 @@ static char *find(char c, int n)
 	return 0;
 }
 
-static int count(char c)
+static int
+count(char c)
 {
 	int ct;
 	char *i;
@@ -197,7 +212,8 @@ static int count(char c)
 	return ct;
 }
 
-static void ptarg(int count)
+static void
+ptarg(int count)
 {
 	char a;
 	a = 'a' + (count % 26);
@@ -206,7 +222,8 @@ static void ptarg(int count)
 	attroff(A_STANDOUT);
 }
 
-static int skips(int lvl)
+static int
+skips(int lvl)
 {
 	int i;
 	for (i = 1; lvl > 0; lvl--)
@@ -214,7 +231,8 @@ static int skips(int lvl)
 	return i;
 }
 
-static void drawdisamb(char c, int lvl, int off)
+static void
+drawdisamb(char c, int lvl, int off)
 {
 	char *i;
 	int ct;
@@ -235,7 +253,8 @@ static void drawdisamb(char c, int lvl, int off)
 	refresh();
 }
 
-static char *disamb(char c, int lvl, int off)
+static char *
+disamb(char c, int lvl, int off)
 {
 	char inp;
 	int i;
@@ -249,7 +268,8 @@ static char *disamb(char c, int lvl, int off)
 	return disamb(c, lvl + 1, off + i * skips(lvl));
 }
 
-static char *hunt(void)
+static char *
+hunt(void)
 {
 	char c;
 	if (gapsize == bufsize)
@@ -259,7 +279,8 @@ static char *hunt(void)
 	return disamb(c, 0, 0);
 }
 
-static void rubout(char *t)
+static void
+rubout(char *t)
 {
 	int sz;
 	sz = gap - (t + 1 - buffer);
@@ -268,7 +289,8 @@ static void rubout(char *t)
 	gap--;
 }
 
-static int insertmode(char *t)
+static int
+insertmode(char *t)
 {
 	int c;
 	for (;;) {
@@ -298,7 +320,8 @@ static int insertmode(char *t)
 	return 1;
 }
 
-static void delete(target t)
+static void
+delete(target t)
 {
 	int n, tn;
 	if (t.end != buffer + bufsize)
@@ -310,7 +333,8 @@ static void delete(target t)
 	gapsize += tn;
 }
 
-static int cmdloop(void)
+static int
+cmdloop(void)
 {
 	int q, c;
 	target t;
@@ -380,7 +404,8 @@ static int cmdloop(void)
 	return 1;
 }
 
-static void ed(void)
+static void
+ed(void)
 {
 	if (!bread())
 		return;
@@ -388,7 +413,8 @@ static void ed(void)
 	cmdloop();
 }
 
-int main(int argc, char **argv)
+int
+main(int argc, char **argv)
 {
 	if (argc != 2) {
 		err("missing file arg");
