@@ -11,9 +11,6 @@
 static char *filename, *buffer, *start, *end;
 char errbuf[256];
 static int bufsize, gap, gapsize, lwe_scroll;
-typedef struct {
-	char *start, *end;
-} target;
 
 static void
 err(const char *str)
@@ -321,14 +318,19 @@ insertmode(char *t)
 }
 
 static void
-delete(target t)
+delete(char *start, char *end)
 {
 	int n, tn;
-	if (t.end != buffer + bufsize)
-		t.end++;
-	n = buffer + bufsize - t.end;
-	tn = t.end - t.start;
-	memmove(t.start, t.end, n);
+	if (end < start) {
+		char *tmp = end;
+		end = start;
+		start = tmp;
+	}
+	if (end != buffer + bufsize)
+		end++;
+	n = buffer + bufsize - end;
+	tn = end - start;
+	memmove(start, end, n);
 	gap -= tn;
 	gapsize += tn;
 }
@@ -337,7 +339,7 @@ static int
 cmdloop(void)
 {
 	int q, c;
-	target t;
+	char *start, *end;
 	for (q = 0; q == 0;) {
 		draw();
 		c = getch();
@@ -359,19 +361,19 @@ cmdloop(void)
 			q = 1;
 			break;
 		case 'i':
-			t.start = hunt();
-			if (t.start == 0)
+			start = hunt();
+			if (start == 0)
 				break;
-			if (!insertmode(t.start))
+			if (!insertmode(start))
 				return 0;
 			break;
 		case 'a':
-			t.start = hunt();
-			if (t.start == 0)
+			start = hunt();
+			if (start == 0)
 				break;
-			if (t.start != buffer + bufsize)
-				t.start++;
-			if (!insertmode(t.start))
+			if (start != buffer + bufsize)
+				start++;
+			if (!insertmode(start))
 				return 0;
 			break;
 		case 'w':
@@ -379,19 +381,19 @@ cmdloop(void)
 				return 0;
 			break;
 		case 'd':
-			t.start = hunt();
-			t.end = hunt();
-			if (t.start == 0 || t.end == 0)
+			start = hunt();
+			end = hunt();
+			if (start == 0 || end == 0)
 				break;
-			delete(t);
+			delete(start, end);
 			break;
 		case 'c':
-			t.start = hunt();
-			t.end = hunt();
-			if (t.start == 0 || t.end == 0)
+			start = hunt();
+			end = hunt();
+			if (start == 0 || end == 0)
 				break;
-			delete(t);
-			insertmode(t.start);
+			delete(start, end);
+			insertmode(start);
 			break;
 		case 'r':
 			breload();
