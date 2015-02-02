@@ -420,7 +420,7 @@ main(int argc, char **argv)
 {
 	if (argc != 2) {
 		err("missing file arg");
-		return 2;
+		goto error;
 	} else {
 		initscr();
 		cbreak();
@@ -432,7 +432,10 @@ main(int argc, char **argv)
 		ed();
 		endwin();
 		if (strcmp(errbuf, ""))
-			fprintf(stderr, "error: %s\n", errbuf);
+			goto error;
 		return 0;
 	}
+error:
+	fprintf(stderr, "error: %s\n", errbuf);
+	return 1;
 }
