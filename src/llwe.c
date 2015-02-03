@@ -331,39 +331,50 @@ delete(char *start, char *end)
 	gapsize += tn;
 }
 
-// returns true if the loop should exit
-typedef bool (*command_fn)(void);
+enum loopsig {
+	sigcont,
+	sigquit,
+	sigerror
+};
 
-static bool
+static enum loopsig
+checksig(bool ok)
+{
+	return ok ? sigcont : sigerror;
+}
+
+typedef enum loopsig (*command_fn)(void);
+
+static enum loopsig
 scrolldown(void)
 {
 	doscrl(LINES / 2);
-	return false;
+	return sigcont;
 }
 
-static bool
+static enum loopsig
 scrollup(void)
 {
 	doscrl(-LINES / 2);
-	return false;
+	return sigcont;
 }
 
-static bool
+static enum loopsig
 quitcmd(void)
 {
-	return true;
+	return sigquit;
 }
 
-static bool
+static enum loopsig
 insertcmd(void)
 {
 	char *start = hunt();
 	if (start == NULL)
 		return false;
-	return !insertmode(start);
+	return checksig(insertmode(start));
 }
 
-static bool
+static enum loopsig
 appendcmd(void)
 {
 	char *start = hunt();
@@ -371,13 +382,13 @@ appendcmd(void)
 		return false;
 	if (start != buffer + bufsize)
 		start++;
-	return !insertmode(start);
+	return checksig(insertmode(start));
 }
 
-static bool
+static enum loopsig
 writecmd(void)
 {
-	return !bsave();
+	return checksig(bsave());
 }
 
 static void
@@ -390,7 +401,7 @@ orient(char **start, char **end)
 	}
 }
 
-static bool
+static enum loopsig
 deletecmd(void)
 {
 	char *start = hunt();
@@ -399,10 +410,10 @@ deletecmd(void)
 		return false;
 	orient(&start, &end);
 	delete(start, end);
-	return false;
+	return sigcont;
 }
 
-static bool
+static enum loopsig
 changecmd(void)
 {
 	char *start = hunt();
@@ -411,21 +422,21 @@ changecmd(void)
 		return false;
 	orient(&start, &end);
 	delete(start, end);
-	return !insertmode(start);
+	return checksig(insertmode(start));
 }
 
-static bool
+static enum loopsig
 reloadcmd(void)
 {
 	breload();
-	return false;
+	return sigcont;
 }
 
-static bool
+static enum loopsig
 jumptolinecmd(void)
 {
 	jumptoline();
-	return false;
+	return sigcont;
 }
 
 static command_fn cmdtbl[512] = {
@@ -450,13 +461,16 @@ static command_fn cmdtbl[512] = {
 static int
 cmdloop(void)
 {
-	bool q = false;
-	while (!q) {
+	for (;;) {
 		draw();
 		int c = getch();
-		q = cmdtbl[c]();
+		enum loopsig s = cmdtbl[c]();
+		if (s == sigquit)
+			return 1;
+		else if (s == sigerror)
+			return 0;
 	}
-	return 1;
+	return 0;
 }
 
 static void
