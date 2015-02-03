@@ -1,8 +1,9 @@
 /* A unique cursorless text editor. (c) 2015 Tom Wright */
-#include <curses.h>
 #include <ctype.h>
-#include <stdlib.h>
+#include <curses.h>
+#include <stdbool.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #define C_D 4
@@ -321,11 +322,6 @@ static void
 delete(char *start, char *end)
 {
 	int n, tn;
-	if (end < start) {
-		char *tmp = end;
-		end = start;
-		start = tmp;
-	}
 	if (end != buffer + bufsize)
 		end++;
 	n = buffer + bufsize - end;
@@ -335,73 +331,130 @@ delete(char *start, char *end)
 	gapsize += tn;
 }
 
+// returns true if the loop should exit
+typedef bool (*command_fn)(void);
+
+static bool
+scrolldown(void)
+{
+	doscrl(LINES / 2);
+	return false;
+}
+
+static bool
+scrollup(void)
+{
+	doscrl(-LINES / 2);
+	return false;
+}
+
+static bool
+quitcmd(void)
+{
+	return true;
+}
+
+static bool
+insertcmd(void)
+{
+	char *start = hunt();
+	if (start == NULL)
+		return false;
+	return !insertmode(start);
+}
+
+static bool
+appendcmd(void)
+{
+	char *start = hunt();
+	if (start == NULL)
+		return false;
+	if (start != buffer + bufsize)
+		start++;
+	return !insertmode(start);
+}
+
+static bool
+writecmd(void)
+{
+	return !bsave();
+}
+
+static void
+orient(char **start, char **end)
+{
+	if (*end < *start) {
+		char *tmp = *end;
+		*end = *start;
+		*start = tmp;
+	}
+}
+
+static bool
+deletecmd(void)
+{
+	char *start = hunt();
+	char *end = hunt();
+	if (start == NULL || end == NULL)
+		return false;
+	orient(&start, &end);
+	delete(start, end);
+	return false;
+}
+
+static bool
+changecmd(void)
+{
+	char *start = hunt();
+	char *end = hunt();
+	if (start == NULL || end == NULL)
+		return false;
+	orient(&start, &end);
+	delete(start, end);
+	return !insertmode(start);
+}
+
+static bool
+reloadcmd(void)
+{
+	breload();
+	return false;
+}
+
+static bool
+jumptolinecmd(void)
+{
+	jumptoline();
+	return false;
+}
+
+static command_fn cmdtbl[512] = {
+	[C_D] = scrolldown,
+	[KEY_DOWN] = scrolldown,
+	[KEY_NPAGE] = scrolldown,
+	['j'] = scrolldown,
+	[C_U] = scrollup,
+	[KEY_UP] = scrollup,
+	[KEY_PPAGE] = scrollup,
+	['k'] = scrollup,
+	['q'] = quitcmd,
+	['i'] = insertcmd,
+	['a'] = appendcmd,
+	['w'] = writecmd,
+	['d'] = deletecmd,
+	['c'] = changecmd,
+	['r'] = reloadcmd,
+	['g'] = jumptolinecmd,
+};
+
 static int
 cmdloop(void)
 {
-	int q, c;
-	char *start, *end;
-	for (q = 0; q == 0;) {
+	bool q = false;
+	while (!q) {
 		draw();
-		c = getch();
-		switch (c) {
-		case C_D:
-		case KEY_DOWN:
-		case KEY_NPAGE:
-		case 'j':
-			doscrl(LINES / 2);
-			break;
-		case C_U:
-		case KEY_UP:
-		case KEY_PPAGE:
-		case 'k':
-			doscrl(-LINES / 2);
-			break;
-		case 'q':
-		case EOF:
-			q = 1;
-			break;
-		case 'i':
-			start = hunt();
-			if (start == 0)
-				break;
-			if (!insertmode(start))
-				return 0;
-			break;
-		case 'a':
-			start = hunt();
-			if (start == 0)
-				break;
-			if (start != buffer + bufsize)
-				start++;
-			if (!insertmode(start))
-				return 0;
-			break;
-		case 'w':
-			if (!bsave())
-				return 0;
-			break;
-		case 'd':
-			start = hunt();
-			end = hunt();
-			if (start == 0 || end == 0)
-				break;
-			delete(start, end);
-			break;
-		case 'c':
-			start = hunt();
-			end = hunt();
-			if (start == 0 || end == 0)
-				break;
-			delete(start, end);
-			insertmode(start);
-			break;
-		case 'r':
-			breload();
-			break;
-		case 'g':
-			jumptoline();
-			break;
-		}
+		int c = getch();
+		q = cmdtbl[c]();
 	}
 	return 1;
 }
