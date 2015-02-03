@@ -3,8 +3,8 @@
 
 AC_PREREQ([2.69])
 AC_INIT([llwe], [snapshot], [tom_wright@fastmail.fm])
-AM_INIT_AUTOMAKE([-Wall -Werror foreign])
-AC_CONFIG_SRCDIR([llwe.c])
+AM_INIT_AUTOMAKE([-Wall -Werror foreign subdir-objects])
+AC_CONFIG_SRCDIR([src/llwe.c])
 AC_CONFIG_HEADERS([config.h])
 
 # Checks for programs.

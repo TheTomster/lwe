@@ -1,2 +1,2 @@
 bin_PROGRAMS = llwe
-llwe_SOURCES = llwe.c
+llwe_SOURCES = src/llwe.c
