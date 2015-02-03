@@ -464,7 +464,10 @@ cmdloop(void)
 	for (;;) {
 		draw();
 		int c = getch();
-		enum loopsig s = cmdtbl[c]();
+		command_fn cmd = cmdtbl[c];
+		if (cmd == NULL)
+			continue;
+		enum loopsig s = cmd();
 		if (s == sigquit)
 			return 1;
 		else if (s == sigerror)
