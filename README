@@ -18,6 +18,8 @@ Quick command reference:
     d            delete
     c            change
     g            goto line
+    D            delete lines
+    C            change lines
 
 
 Cursorless editing
