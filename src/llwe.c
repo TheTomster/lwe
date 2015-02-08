@@ -546,20 +546,44 @@ orienti(int *a, int *b)
 	}
 }
 
+struct linerange {
+	char *start;
+	char *end;
+};
+
+static struct linerange
+huntlinerange(void)
+{
+        int startoffset = linehunt();
+        if (startoffset == -1)
+                return (struct linerange){.start = NULL, .end = NULL};
+        int endoffset = linehunt();
+        if (endoffset == -1)
+                return (struct linerange){.start = NULL, .end = NULL};
+        orienti(&startoffset, &endoffset);
+        char *start = startofline(startoffset);
+        char *end = endofline(endoffset);
+	return (struct linerange){.start = start, .end = end};
+}
+
 static enum loopsig
 deletelinescmd(void)
 {
-	int startoffset = linehunt();
-	if (startoffset == -1)
+	struct linerange r = huntlinerange();
+	if (r.start == NULL || r.end == NULL)
 		return sigcont;
-	int endoffset = linehunt();
-	if (endoffset == -1)
-		return sigcont;
-	orienti(&startoffset, &endoffset);
-	char *start = startofline(startoffset);
-	char *end = endofline(endoffset);
-	delete(start, end);
+	delete(r.start, r.end);
 	return sigcont;
+}
+
+static enum loopsig
+changelinescmd(void)
+{
+	struct linerange r = huntlinerange();
+	if (r.start == NULL || r.end == NULL)
+		return sigcont;
+	delete(r.start, r.end);
+	return checksig(insertmode(r.start));
 }
 
 static command_fn cmdtbl[512] = {
@@ -580,6 +604,7 @@ static command_fn cmdtbl[512] = {
 	['r'] = reloadcmd,
 	['g'] = jumptolinecmd,
 	['D'] = deletelinescmd,
+	['C'] = changelinescmd,
 };
 
 static int
