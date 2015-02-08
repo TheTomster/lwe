@@ -354,8 +354,10 @@ endofline(int off)
 }
 
 static int
-linehunt(int lvl, int off)
+linehunt(void)
 {
+	int lvl = 0;
+	int off = 0;
 	if (gapsize == bufsize)
 		return -1;
 	while (!lineselected(lvl, off)) {
@@ -534,16 +536,28 @@ jumptolinecmd(void)
 	return sigcont;
 }
 
+static void
+orienti(int *a, int *b)
+{
+	if (*b < *a) {
+		int tmp = *a;
+		*a = *b;
+		*b = tmp;
+	}
+}
+
 static enum loopsig
 deletelinescmd(void)
 {
-	char *start = startofline(linehunt(0, 0));
-	if (end == NULL)
+	int startoffset = linehunt();
+	if (startoffset == -1)
 		return sigcont;
-	char *end = endofline(linehunt(0, 0));
-	if (end == NULL)
+	int endoffset = linehunt();
+	if (endoffset == -1)
 		return sigcont;
-	orient(&start, &end);
+	orienti(&startoffset, &endoffset);
+	char *start = startofline(startoffset);
+	char *end = endofline(endoffset);
 	delete(start, end);
 	return sigcont;
 }
