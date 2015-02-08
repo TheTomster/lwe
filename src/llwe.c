@@ -223,47 +223,67 @@ ptarg(int count)
 static int
 skips(int lvl)
 {
-	int i;
-	for (i = 1; lvl > 0; lvl--)
+	if (lvl == 0)
+		return 0;
+	int i = 1;
+	while (lvl > 0) {
+		lvl--;
 		i *= 26;
-	return i;
+	}
+	return i - 1;
 }
 
 static void
-drawdisamb(char c, int lvl, int off)
+drawdisambchar(char c, int toskip, char *i, int *tcount)
 {
-	char *i;
-	int ct;
+	if (*i == c && toskip <= 0) {
+		ptarg(*tcount);
+		(*tcount)++;
+	} else {
+		pc(*i);
+	}
+}
+
+static void
+drawdisamb(char c, int lvl, int toskip)
+{
 	erase();
 	move(0, 0);
-	ct = 0;
-	for (i = start; i < end; i++) {
-		if (*i == c && off > 0) {
-			pc(*i);
-			off--;
-		} else if (*i == c && off <= 0) {
-			ptarg(ct++);
-			off = skips(lvl) - 1;
-		} else {
-			pc(*i);
-		}
+	int tcount = 0;
+	for (char *i = start; i < end; i++) {
+		drawdisambchar(c, toskip, i, &tcount);
+		if (*i != c)
+			continue;
+		toskip = (toskip > 0) ? (toskip - 1) : skips(lvl);
 	}
 	refresh();
 }
 
-static char *
-disamb(char c, int lvl, int off)
+static bool
+onlymatch(char c, int lvl, int toskip)
 {
-	char inp;
-	int i;
-	if (count(c) - off <= skips(lvl))
-		return find(c, off);
-	drawdisamb(c, lvl, off);
-	inp = getch();
-	i = inp - 'a';
-	if (i < 0 || i > 26)
-		return 0;
-	return disamb(c, lvl + 1, off + i * skips(lvl));
+	// If the initial skip + this level's skip in between matches is
+	// greater than the count of matching characters in the window,
+	// then we have narrowed it down to just one choice.  The second
+	// match would have to be past the end of the window.
+	return skips(lvl) + toskip >= count(c);
+}
+
+static char *
+disamb(char c)
+{
+	int lvl = 0;
+	int toskip = 0;
+	while (!onlymatch(c, lvl, toskip)) {
+		drawdisamb(c, lvl, toskip);
+		char input = getch();
+		int i = input - 'a';
+		if (i < 0 || i >= 26)
+			return NULL;
+		toskip += i * (skips(lvl) + 1);
+		lvl++;
+	}
+	return find(c, toskip);
 }
 
 static char *
@@ -274,7 +294,78 @@ hunt(void)
 		return buffer;
 	draw();
 	c = getch();
-	return disamb(c, 0, 0);
+	return disamb(c);
+}
+
+static void
+drawlinelbls(int lvl, int off)
+{
+	erase();
+	move(0, 0);
+	winbounds();
+	for (char *i = start; i != end; i++)
+		pc(*i);
+	int count = 0;
+	int step = skips(lvl) + 1;
+	step = step < 1 ? 1 : step;
+	for (int line = off; line < LINES; line += step) {
+		move(line, 0);
+		ptarg(count++);
+	}
+	refresh();
+}
+
+static bool
+lineselected(int lvl, int off)
+{
+	return off + skips(lvl) > LINES;
+}
+
+static int
+getoffset(int lvl, int off)
+{
+	char c = getch();
+	int i = c - 'a';
+	if (i < 0 || i >= 26)
+		return -1;
+	int delta = (skips(lvl) + 1) * i;
+	return off + delta;
+}
+
+static char *
+startofline(int off)
+{
+	char *result = start;
+	while (off > 0) {
+		if (result >= end)
+			return NULL;
+		if (*result == '\n')
+			off--;
+		result++;
+	}
+	return result;
+}
+
+static char *
+endofline(int off)
+{
+	char *nextstart = startofline(off + 1);
+	return nextstart - 1;
+}
+
+static int
+linehunt(int lvl, int off)
+{
+	if (gapsize == bufsize)
+		return -1;
+	while (!lineselected(lvl, off)) {
+		drawlinelbls(lvl, off);
+		off = getoffset(lvl, off);
+		if (off < 0)
+			return -1;
+		lvl++;
+	}
+	return off;
 }
 
 static void
@@ -405,9 +496,11 @@ static enum loopsig
 deletecmd(void)
 {
 	char *start = hunt();
+	if (start == NULL)
+		return sigcont;
 	char *end = hunt();
-	if (start == NULL || end == NULL)
-		return false;
+	if (end == NULL)
+		return sigcont;
 	orient(&start, &end);
 	delete(start, end);
 	return sigcont;
@@ -417,9 +510,11 @@ static enum loopsig
 changecmd(void)
 {
 	char *start = hunt();
+	if (start == NULL)
+		return sigcont;
 	char *end = hunt();
-	if (start == NULL || end == NULL)
-		return false;
+	if (end == NULL)
+		return sigcont;
 	orient(&start, &end);
 	delete(start, end);
 	return checksig(insertmode(start));
@@ -436,6 +531,20 @@ static enum loopsig
 jumptolinecmd(void)
 {
 	jumptoline();
+	return sigcont;
+}
+
+static enum loopsig
+deletelinescmd(void)
+{
+	char *start = startofline(linehunt(0, 0));
+	if (end == NULL)
+		return sigcont;
+	char *end = endofline(linehunt(0, 0));
+	if (end == NULL)
+		return sigcont;
+	orient(&start, &end);
+	delete(start, end);
 	return sigcont;
 }
 
@@ -456,6 +565,7 @@ static command_fn cmdtbl[512] = {
 	['c'] = changecmd,
 	['r'] = reloadcmd,
 	['g'] = jumptolinecmd,
+	['D'] = deletelinescmd,
 };
 
 static int
