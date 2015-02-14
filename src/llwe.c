@@ -1,17 +1,25 @@
 /* A unique cursorless text editor. (c) 2015 Tom Wright */
 #include <ctype.h>
 #include <curses.h>
+#include <errno.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
 
 #define C_D 4
 #define C_U 21
 
 static char *filename, *buffer, *start, *end;
 char errbuf[256];
-static int bufsize, gap, gapsize, lwe_scroll;
+static int bufsize, gap, lwe_scroll;
+
+static int
+gapsize(void)
+{
+	return bufsize - gap;
+}
 
 static void
 err(const char *str)
@@ -19,30 +27,20 @@ err(const char *str)
 	snprintf(errbuf, sizeof(errbuf), "%s", str);
 }
 
-static int
+static bool
 bext(void)
 {
-	gapsize = bufsize;
-	bufsize *= 2;
-	buffer = realloc(buffer, bufsize);
+	int newsize = bufsize * 2;
+	buffer = realloc(buffer, newsize);
 	if (buffer == NULL) {
 		err("memory");
-		return 0;
+		return false;
 	}
-	return 1;
+	bufsize = newsize;
+	return true;
 }
 
-static int
-bput(char c)
-{
-	buffer[gap++] = c;
-	gapsize--;
-	if (gapsize == 0)
-		return bext();
-	return 1;
-}
-
-static int
+static bool
 bins(char c, char *t)
 {
 	int sz;
@@ -50,37 +48,58 @@ bins(char c, char *t)
 	memmove(t + 1, t, sz);
 	*t = c;
 	gap++;
-	gapsize--;
-	if (gapsize == 0)
+	if (gapsize() == 0)
 		return bext();
 	else
-		return 1;
+		return true;
 }
 
-static int
-bread(void)
+static bool
+initbuf(int sz)
 {
-	char c;
-	FILE *f;
-	bufsize = 4096;
-	gap = 0;
-	gapsize = bufsize;
+	bufsize = sz + 4096;
+	gap = sz;
 	buffer = malloc(bufsize);
 	if (buffer == NULL) {
 		err("memory");
-		return 0;
+		return false;
 	}
-	f = fopen(filename, "r");
+	return true;
+}
+
+static bool
+filetobuf(int sz)
+{
+	FILE *f = fopen(filename, "r");
 	if (f == NULL) {
-		return 1;
+		err("read");
+		return false;
 	}
-	for (c = fgetc(f); c != EOF; c = fgetc(f))
-		if (!bput(c))
-			goto fail;
-	fclose(f);
-	return 1;
-fail:	fclose(f);
-	return 0;
+	int rsz = fread(buffer, 1, sz, f);
+	if (rsz != sz) {
+		err("read");
+		return false;
+	}
+	return true;
+}
+
+static bool
+bread(void)
+{
+	struct stat st;
+	errno = 0;
+	stat(filename, &st);
+	if (errno == 0) {
+		bool ok = initbuf(st.st_size);
+		if (!ok)
+			return false;
+		return filetobuf(st.st_size);
+	} else if (errno == ENOENT) {
+		return initbuf(0);
+	} else {
+		err(strerror(errno));
+		return false;
+	}
 }
 
 int
@@ -98,7 +117,7 @@ bsave(void)
 		err("write");
 		return 0;
 	}
-	fwrite(buffer, 1, bufsize - gapsize, f);
+	fwrite(buffer, 1, bufsize - gapsize(), f);
 	fclose(f);
 	return 1;
 }
@@ -106,7 +125,7 @@ bsave(void)
 static int
 isend(const char *s)
 {
-	return s >= (buffer + bufsize - gapsize);
+	return s >= (buffer + bufsize - gapsize());
 }
 
 static void
@@ -290,7 +309,7 @@ static char *
 hunt(void)
 {
 	char c;
-	if (gapsize == bufsize)
+	if (gapsize() == bufsize)
 		return buffer;
 	draw();
 	c = getch();
@@ -358,7 +377,7 @@ linehunt(void)
 {
 	int lvl = 0;
 	int off = 0;
-	if (gapsize == bufsize)
+	if (gapsize() == bufsize)
 		return -1;
 	while (!lineselected(lvl, off)) {
 		drawlinelbls(lvl, off);
@@ -376,7 +395,6 @@ rubout(char *t)
 	int sz;
 	sz = gap - (t + 1 - buffer);
 	memmove(t, t + 1, sz);
-	gapsize++;
 	gap--;
 }
 
@@ -421,7 +439,6 @@ delete(char *start, char *end)
 	tn = end - start;
 	memmove(start, end, n);
 	gap -= tn;
-	gapsize += tn;
 }
 
 enum loopsig {
