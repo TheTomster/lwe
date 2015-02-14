@@ -381,6 +381,19 @@ rubout(char *t)
 	gap--;
 }
 
+static void
+delete(char *start, char *end)
+{
+	int n, tn;
+	if (end != buffer + bufsize)
+		end++;
+	n = buffer + bufsize - end;
+	tn = end - start;
+	memmove(start, end, n);
+	gap -= tn;
+	gapsize += tn;
+}
+
 static int
 insertmode(char *t)
 {
@@ -401,19 +414,23 @@ insertmode(char *t)
 			rubout(t);
 			continue;
 		}
-        if(c==C_W) {
-            while(!isspace(*t)){
-                *t = ' ';
-                if(t == start){
-                    break;
-                }
-                --t;
-            }
-            if(t != start)
-                ++t; // so we start typing with a space between words
-			rubout(t);
+		if(c == C_W) { // Remove previous word
+			if(!t || t <= buffer)
+				continue;
+			// Don't delete letter that our cursor is on otherwise we would
+			// remove the letter after our last entered character in insert mode
+			char * dend = t-1;
+			char * dstart = dend;
+			while(dstart && !isspace(*dstart) && (dstart > buffer)){
+				dstart--;
+			}
+			// Preserve space before cursor when we can, looks better
+			if(dstart != buffer && ((dstart + 1) < dend))
+				dstart++;
+			delete(dstart, dend);
+			t = dstart;
 			continue;
-        }
+		}
 		if (!isgraph(c) && !isspace(c)) {
 			continue;
 		}
@@ -423,19 +440,6 @@ insertmode(char *t)
 			t++;
 	}
 	return 1;
-}
-
-static void
-delete(char *start, char *end)
-{
-	int n, tn;
-	if (end != buffer + bufsize)
-		end++;
-	n = buffer + bufsize - end;
-	tn = end - start;
-	memmove(start, end, n);
-	gap -= tn;
-	gapsize += tn;
 }
 
 enum loopsig {
