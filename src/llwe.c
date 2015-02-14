@@ -8,6 +8,7 @@
 
 #define C_D 4
 #define C_U 21
+#define C_W 23
 
 static char *filename, *buffer, *start, *end;
 char errbuf[256];
@@ -400,6 +401,19 @@ insertmode(char *t)
 			rubout(t);
 			continue;
 		}
+        if(c==C_W) {
+            while(!isspace(*t)){
+                *t = ' ';
+                if(t == start){
+                    break;
+                }
+                --t;
+            }
+            if(t != start)
+                ++t; // so we start typing with a space between words
+			rubout(t);
+			continue;
+        }
 		if (!isgraph(c) && !isspace(c)) {
 			continue;
 		}
