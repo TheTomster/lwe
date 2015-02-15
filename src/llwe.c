@@ -10,6 +10,7 @@
 
 #define C_D 4
 #define C_U 21
+#define C_W 23
 
 static char *filename, *buffer, *start, *end;
 char errbuf[256];
@@ -398,6 +399,18 @@ rubout(char *t)
 	gap--;
 }
 
+static void
+delete(char *start, char *end)
+{
+	int n, tn;
+	if (end != buffer + bufsize)
+		end++;
+	n = buffer + bufsize - end;
+	tn = end - start;
+	memmove(start, end, n);
+	gap -= tn;
+}
+
 static int
 insertmode(char *t)
 {
@@ -418,6 +431,23 @@ insertmode(char *t)
 			rubout(t);
 			continue;
 		}
+		if(c == C_W) { // Remove previous word
+			if(!t || t <= buffer)
+				continue;
+			// Don't delete letter that our cursor is on otherwise we would
+			// remove the letter after our last entered character in insert mode
+			char * dend = t-1;
+			char * dstart = dend;
+			while(dstart && !isspace(*dstart) && (dstart > buffer)){
+				dstart--;
+			}
+			// Preserve space before cursor when we can, looks better
+			if(dstart != buffer && ((dstart + 1) < dend))
+				dstart++;
+			delete(dstart, dend);
+			t = dstart;
+			continue;
+		}
 		if (!isgraph(c) && !isspace(c)) {
 			continue;
 		}
@@ -427,18 +457,6 @@ insertmode(char *t)
 			t++;
 	}
 	return 1;
-}
-
-static void
-delete(char *start, char *end)
-{
-	int n, tn;
-	if (end != buffer + bufsize)
-		end++;
-	n = buffer + bufsize - end;
-	tn = end - start;
-	memmove(start, end, n);
-	gap -= tn;
 }
 
 enum loopsig {
