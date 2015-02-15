@@ -16,20 +16,17 @@ static char *filename, *buffer, *start, *end;
 char errbuf[256];
 static int bufsize, gap, lwe_scroll;
 
-static int
-gapsize(void)
+static int gapsize(void)
 {
 	return bufsize - gap;
 }
 
-static void
-err(const char *str)
+static void err(const char *str)
 {
 	snprintf(errbuf, sizeof(errbuf), "%s", str);
 }
 
-static bool
-bext(void)
+static bool bext(void)
 {
 	int newsize = bufsize * 2;
 	buffer = realloc(buffer, newsize);
@@ -41,8 +38,7 @@ bext(void)
 	return true;
 }
 
-static bool
-bins(char c, char *t)
+static bool bins(char c, char *t)
 {
 	int sz;
 	sz = gap - (t - buffer);
@@ -55,8 +51,7 @@ bins(char c, char *t)
 		return true;
 }
 
-static bool
-initbuf(int sz)
+static bool initbuf(int sz)
 {
 	bufsize = sz + 4096;
 	gap = sz;
@@ -68,8 +63,7 @@ initbuf(int sz)
 	return true;
 }
 
-static bool
-filetobuf(int sz)
+static bool filetobuf(int sz)
 {
 	FILE *f = fopen(filename, "r");
 	if (f == NULL) {
@@ -84,8 +78,7 @@ filetobuf(int sz)
 	return true;
 }
 
-static bool
-bread(void)
+static bool bread(void)
 {
 	struct stat st;
 	errno = 0;
@@ -103,15 +96,13 @@ bread(void)
 	}
 }
 
-int
-breload()
+int breload()
 {
 	free(buffer);
 	return bread();
 }
 
-static int
-bsave(void)
+static int bsave(void)
 {
 	FILE *f = fopen(filename, "w");
 	if (f == NULL) {
@@ -123,23 +114,20 @@ bsave(void)
 	return 1;
 }
 
-static int
-isend(const char *s)
+static int isend(const char *s)
 {
 	return s >= (buffer + bufsize - gapsize());
 }
 
-static void
-winbounds(void)
+static void winbounds(void)
 {
 	int r, c, i;
 	r = c = 0;
-	for (i = lwe_scroll, start = buffer; i > 0 && !isend(start);
-	     (start)++)
+	for (i = lwe_scroll, start = buffer; i > 0 && !isend(start); (start)++)
 		if (*start == '\n')
 			i--;
 	end = start;
-loop:	if (isend(end))
+	loop:if (isend(end))
 		return;
 	c++;
 	if (*end == '\n') {
@@ -155,16 +143,14 @@ loop:	if (isend(end))
 		end--;
 }
 
-static void
-pc(char c)
+static void pc(char c)
 {
 	if (!isgraph(c) && !isspace(c))
 		c = '?';
 	addch(c);
 }
 
-static void
-draw(void)
+static void draw(void)
 {
 	char *i;
 	erase();
@@ -175,16 +161,14 @@ draw(void)
 	refresh();
 }
 
-static void
-doscrl(int d)
+static void doscrl(int d)
 {
 	lwe_scroll += d;
 	if (lwe_scroll < 0)
 		lwe_scroll = 0;
 }
 
-static void
-jumptoline(void)
+static void jumptoline(void)
 {
 	char buf[32], c;
 	int i;
@@ -203,8 +187,7 @@ jumptoline(void)
 	doscrl(-LINES / 2);
 }
 
-static char *
-find(char c, int n)
+static char *find(char c, int n)
 {
 	char *i;
 	for (i = start; i < end; i++) {
@@ -218,8 +201,7 @@ find(char c, int n)
 	return 0;
 }
 
-static int
-count(char c)
+static int count(char c)
 {
 	int ct;
 	char *i;
@@ -230,8 +212,7 @@ count(char c)
 	return ct;
 }
 
-static void
-ptarg(int count)
+static void ptarg(int count)
 {
 	char a;
 	a = 'a' + (count % 26);
@@ -240,8 +221,7 @@ ptarg(int count)
 	attroff(A_STANDOUT);
 }
 
-static int
-skips(int lvl)
+static int skips(int lvl)
 {
 	if (lvl == 0)
 		return 0;
@@ -253,8 +233,7 @@ skips(int lvl)
 	return i - 1;
 }
 
-static void
-drawdisambchar(char c, int toskip, char *i, int *tcount)
+static void drawdisambchar(char c, int toskip, char *i, int *tcount)
 {
 	if (*i == c && toskip <= 0) {
 		ptarg(*tcount);
@@ -264,8 +243,7 @@ drawdisambchar(char c, int toskip, char *i, int *tcount)
 	}
 }
 
-static void
-drawdisamb(char c, int lvl, int toskip)
+static void drawdisamb(char c, int lvl, int toskip)
 {
 	erase();
 	move(0, 0);
@@ -279,8 +257,7 @@ drawdisamb(char c, int lvl, int toskip)
 	refresh();
 }
 
-static bool
-onlymatch(char c, int lvl, int toskip)
+static bool onlymatch(char c, int lvl, int toskip)
 {
 	// If the initial skip + this level's skip in between matches is
 	// greater than the count of matching characters in the window,
@@ -289,8 +266,7 @@ onlymatch(char c, int lvl, int toskip)
 	return skips(lvl) + toskip >= count(c);
 }
 
-static char *
-disamb(char c)
+static char *disamb(char c)
 {
 	int lvl = 0;
 	int toskip = 0;
@@ -306,8 +282,7 @@ disamb(char c)
 	return find(c, toskip);
 }
 
-static char *
-hunt(void)
+static char *hunt(void)
 {
 	char c;
 	if (gapsize() == bufsize)
@@ -317,8 +292,7 @@ hunt(void)
 	return disamb(c);
 }
 
-static void
-drawlinelbls(int lvl, int off)
+static void drawlinelbls(int lvl, int off)
 {
 	erase();
 	move(0, 0);
@@ -335,14 +309,12 @@ drawlinelbls(int lvl, int off)
 	refresh();
 }
 
-static bool
-lineselected(int lvl, int off)
+static bool lineselected(int lvl, int off)
 {
 	return off + skips(lvl) > LINES;
 }
 
-static int
-getoffset(int lvl, int off)
+static int getoffset(int lvl, int off)
 {
 	char c = getch();
 	int i = c - 'a';
@@ -352,8 +324,7 @@ getoffset(int lvl, int off)
 	return off + delta;
 }
 
-static char *
-startofline(int off)
+static char *startofline(int off)
 {
 	char *result = start;
 	while (off > 0) {
@@ -366,15 +337,13 @@ startofline(int off)
 	return result;
 }
 
-static char *
-endofline(int off)
+static char *endofline(int off)
 {
 	char *nextstart = startofline(off + 1);
 	return nextstart - 1;
 }
 
-static int
-linehunt(void)
+static int linehunt(void)
 {
 	int lvl = 0;
 	int off = 0;
@@ -390,8 +359,7 @@ linehunt(void)
 	return off;
 }
 
-static void
-rubout(char *t)
+static void rubout(char *t)
 {
 	int sz;
 	sz = gap - (t + 1 - buffer);
@@ -399,8 +367,7 @@ rubout(char *t)
 	gap--;
 }
 
-static void
-delete(char *start, char *end)
+static void delete(char *start, char *end)
 {
 	int n, tn;
 	if (end != buffer + bufsize)
@@ -411,8 +378,7 @@ delete(char *start, char *end)
 	gap -= tn;
 }
 
-static int
-insertmode(char *t)
+static int insertmode(char *t)
 {
 	int c;
 	for (;;) {
@@ -431,18 +397,19 @@ insertmode(char *t)
 			rubout(t);
 			continue;
 		}
-		if(c == C_W) { // Remove previous word
-			if(!t || t <= buffer)
+		if (c == C_W) {	// Remove previous word
+			if (!t || t <= buffer)
 				continue;
 			// Don't delete letter that our cursor is on otherwise we would
 			// remove the letter after our last entered character in insert mode
-			char * dend = t-1;
-			char * dstart = dend;
-			while(dstart && !isspace(*dstart) && (dstart > buffer)){
+			char *dend = t - 1;
+			char *dstart = dend;
+			while (dstart && !isspace(*dstart)
+			       && (dstart > buffer)) {
 				dstart--;
 			}
 			// Preserve space before cursor when we can, looks better
-			if(dstart != buffer && ((dstart + 1) < dend))
+			if (dstart != buffer && ((dstart + 1) < dend))
 				dstart++;
 			delete(dstart, dend);
 			t = dstart;
@@ -465,36 +432,31 @@ enum loopsig {
 	sigerror
 };
 
-static enum loopsig
-checksig(bool ok)
+static enum loopsig checksig(bool ok)
 {
 	return ok ? sigcont : sigerror;
 }
 
-typedef enum loopsig (*command_fn)(void);
+typedef enum loopsig (*command_fn) (void);
 
-static enum loopsig
-scrolldown(void)
+static enum loopsig scrolldown(void)
 {
 	doscrl(LINES / 2);
 	return sigcont;
 }
 
-static enum loopsig
-scrollup(void)
+static enum loopsig scrollup(void)
 {
 	doscrl(-LINES / 2);
 	return sigcont;
 }
 
-static enum loopsig
-quitcmd(void)
+static enum loopsig quitcmd(void)
 {
 	return sigquit;
 }
 
-static enum loopsig
-insertcmd(void)
+static enum loopsig insertcmd(void)
 {
 	char *start = hunt();
 	if (start == NULL)
@@ -502,8 +464,7 @@ insertcmd(void)
 	return checksig(insertmode(start));
 }
 
-static enum loopsig
-appendcmd(void)
+static enum loopsig appendcmd(void)
 {
 	char *start = hunt();
 	if (start == NULL)
@@ -513,14 +474,12 @@ appendcmd(void)
 	return checksig(insertmode(start));
 }
 
-static enum loopsig
-writecmd(void)
+static enum loopsig writecmd(void)
 {
 	return checksig(bsave());
 }
 
-static void
-orient(char **start, char **end)
+static void orient(char **start, char **end)
 {
 	if (*end < *start) {
 		char *tmp = *end;
@@ -529,8 +488,7 @@ orient(char **start, char **end)
 	}
 }
 
-static enum loopsig
-deletecmd(void)
+static enum loopsig deletecmd(void)
 {
 	char *start = hunt();
 	if (start == NULL)
@@ -543,8 +501,7 @@ deletecmd(void)
 	return sigcont;
 }
 
-static enum loopsig
-changecmd(void)
+static enum loopsig changecmd(void)
 {
 	char *start = hunt();
 	if (start == NULL)
@@ -557,22 +514,19 @@ changecmd(void)
 	return checksig(insertmode(start));
 }
 
-static enum loopsig
-reloadcmd(void)
+static enum loopsig reloadcmd(void)
 {
 	breload();
 	return sigcont;
 }
 
-static enum loopsig
-jumptolinecmd(void)
+static enum loopsig jumptolinecmd(void)
 {
 	jumptoline();
 	return sigcont;
 }
 
-static void
-orienti(int *a, int *b)
+static void orienti(int *a, int *b)
 {
 	if (*b < *a) {
 		int tmp = *a;
@@ -586,23 +540,21 @@ struct linerange {
 	char *end;
 };
 
-static struct linerange
-huntlinerange(void)
+static struct linerange huntlinerange(void)
 {
-        int startoffset = linehunt();
-        if (startoffset == -1)
-                return (struct linerange){.start = NULL, .end = NULL};
-        int endoffset = linehunt();
-        if (endoffset == -1)
-                return (struct linerange){.start = NULL, .end = NULL};
-        orienti(&startoffset, &endoffset);
-        char *start = startofline(startoffset);
-        char *end = endofline(endoffset);
-	return (struct linerange){.start = start, .end = end};
+	int startoffset = linehunt();
+	if (startoffset == -1)
+		return (struct linerange) {.start = NULL,.end = NULL};
+	int endoffset = linehunt();
+	if (endoffset == -1)
+		return (struct linerange) {.start = NULL,.end = NULL};
+	orienti(&startoffset, &endoffset);
+	char *start = startofline(startoffset);
+	char *end = endofline(endoffset);
+	return (struct linerange) {.start = start,.end = end};
 }
 
-static enum loopsig
-deletelinescmd(void)
+static enum loopsig deletelinescmd(void)
 {
 	struct linerange r = huntlinerange();
 	if (r.start == NULL || r.end == NULL)
@@ -611,8 +563,7 @@ deletelinescmd(void)
 	return sigcont;
 }
 
-static enum loopsig
-changelinescmd(void)
+static enum loopsig changelinescmd(void)
 {
 	struct linerange r = huntlinerange();
 	if (r.start == NULL || r.end == NULL)
@@ -621,8 +572,7 @@ changelinescmd(void)
 	return checksig(insertmode(r.start));
 }
 
-static enum loopsig
-lineoverlaycmd(void)
+static enum loopsig lineoverlaycmd(void)
 {
 	int lineno = lwe_scroll + 1;
 	int screenline = 0;
@@ -662,8 +612,7 @@ static command_fn cmdtbl[512] = {
 	['n'] = lineoverlaycmd
 };
 
-static int
-cmdloop(void)
+static int cmdloop(void)
 {
 	for (;;) {
 		draw();
@@ -680,8 +629,7 @@ cmdloop(void)
 	return 0;
 }
 
-static void
-ed(void)
+static void ed(void)
 {
 	if (!bread())
 		return;
@@ -689,8 +637,7 @@ ed(void)
 	cmdloop();
 }
 
-int
-main(int argc, char **argv)
+int main(int argc, char **argv)
 {
 	if (argc != 2) {
 		err("missing file arg");
@@ -709,7 +656,7 @@ main(int argc, char **argv)
 			goto error;
 		return 0;
 	}
-error:
+	error:
 	fprintf(stderr, "error: %s\n", errbuf);
 	return 1;
 }
