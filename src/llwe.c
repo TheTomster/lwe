@@ -603,6 +603,25 @@ changelinescmd(void)
 	return checksig(insertmode(r.start));
 }
 
+static enum loopsig
+lineoverlaycmd(void)
+{
+	int lineno = lwe_scroll + 1;
+	int screenline = 0;
+	attron(A_STANDOUT);
+	while (screenline < LINES) {
+		char nstr[32];
+		snprintf(nstr, sizeof(nstr), "%4d", lineno);
+		mvaddstr(screenline, 0, nstr);
+		screenline++;
+		lineno++;
+	}
+	attroff(A_STANDOUT);
+	refresh();
+	getch();
+	return sigcont;
+}
+
 static command_fn cmdtbl[512] = {
 	[C_D] = scrolldown,
 	[KEY_DOWN] = scrolldown,
@@ -622,6 +641,7 @@ static command_fn cmdtbl[512] = {
 	['g'] = jumptolinecmd,
 	['D'] = deletelinescmd,
 	['C'] = changelinescmd,
+	['n'] = lineoverlaycmd
 };
 
 static int
