@@ -106,8 +106,18 @@ static int bsave(void)
 {
 	FILE *f = fopen(filename, "w");
 	if (f == NULL) {
-		err("write");
-		return 0;
+		const char msg1[] = "Error: Failed to write to: ";
+		const char msg2[] = "Press any key to continue.";
+		char nstr[strlen(msg1) + strlen(filename) + 1];
+		snprintf(nstr, sizeof(nstr), "%s%s", msg1, filename);
+		attron(A_STANDOUT);
+		mvaddstr(LINES-2, 0, nstr);
+		mvaddstr(LINES-1, 0, msg2);
+		attroff(A_STANDOUT);
+		refresh();
+		getch();
+		err("Failed to write.");
+		return 1;
 	}
 	fwrite(buffer, 1, bufsize - gapsize(), f);
 	fclose(f);
