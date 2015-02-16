@@ -116,7 +116,6 @@ static int bsave(void)
 		attroff(A_STANDOUT);
 		refresh();
 		getch();
-		err("Failed to write.");
 		return 1;
 	}
 	fwrite(buffer, 1, bufsize - gapsize(), f);
