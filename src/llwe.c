@@ -221,6 +221,21 @@ static int count(char c)
 	return ct;
 }
 
+static int findcharcount(char *s, char *e, char c)
+{
+	int count = 0;
+	if(!s || !e){
+		return count;
+	}
+	while(s != e){
+		if(*s == c){
+			count++;
+		}
+		s++;
+	}
+	return count;
+}
+
 static void ptarg(int count)
 {
 	char a;
@@ -394,6 +409,24 @@ static int insertmode(char *t)
 		draw();
 		if (t > end)
 			doscrl(LINES / 2);
+		// Figure out line number and tabs on the line
+		// so we can highlight the cursor
+		int numtabs = 0;
+		int linenumber = findcharcount(start, t, '\n');
+		char* linestart = startofline(linenumber);
+		if (linestart) {
+			numtabs = findcharcount(linestart, t, '\t');
+			attron(COLOR_PAIR(1));
+			attron(A_BLINK);
+			int offset = (t - linestart) + ((numtabs > 0) ? ((numtabs*TABSIZE)-numtabs) : 0);
+			char ch = *t;
+			char cursorch[1];
+			snprintf(cursorch, sizeof(cursorch), "%c", ch);
+			mvaddstr(linenumber, offset, cursorch);
+			attroff(A_BLINK);
+			attroff(COLOR_PAIR(1));
+			refresh();
+		}
 		c = getch();
 		if (c == '\r')
 			c = '\n';
@@ -653,6 +686,8 @@ int main(int argc, char **argv)
 		goto error;
 	} else {
 		initscr();
+		start_color();
+		init_pair(1, COLOR_BLACK, COLOR_WHITE);
 		cbreak();
 		noecho();
 		nonl();
