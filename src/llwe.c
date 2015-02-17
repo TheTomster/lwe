@@ -416,16 +416,8 @@ static int insertmode(char *t)
 		char* linestart = startofline(linenumber);
 		if (linestart) {
 			numtabs = findcharcount(linestart, t, '\t');
-			attron(COLOR_PAIR(1));
-			attron(A_BLINK);
 			int offset = (t - linestart) + ((numtabs > 0) ? ((numtabs*TABSIZE)-numtabs) : 0);
-			char ch = *t;
-			char cursorch[1];
-			snprintf(cursorch, sizeof(cursorch), "%c", ch);
-			mvaddstr(linenumber, offset, cursorch);
-			attroff(A_BLINK);
-			attroff(COLOR_PAIR(1));
-			refresh();
+			move(linenumber, offset);
 		}
 		c = getch();
 		if (c == '\r')
@@ -686,8 +678,6 @@ int main(int argc, char **argv)
 		goto error;
 	} else {
 		initscr();
-		start_color();
-		init_pair(1, COLOR_BLACK, COLOR_WHITE);
 		cbreak();
 		noecho();
 		nonl();
