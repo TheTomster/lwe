@@ -1,26 +1,26 @@
 diff --git a/src/llwe.c b/src/llwe.c
-index b9d5196..fb3e1f2 100644
+index 505bb77..973fd5b 100644
 --- a/src/llwe.c
 +++ b/src/llwe.c
-@@ -70,7 +70,7 @@ bread(void)
- 		err("memory");
- 		return 0;
- 	}
--	f = fopen(filename, "r");
-+	f = fopen(filename, "r", "ctx=stm");
+@@ -65,7 +65,7 @@ static bool initbuf(int sz)
+ 
+ static bool filetobuf(int sz)
+ {
+-	FILE *f = fopen(filename, "r");
++	FILE *f = fopen(filename, "r", "ctx=stm");
  	if (f == NULL) {
- 		return 1;
- 	}
-@@ -93,7 +93,7 @@ breload()
- static int
- bsave(void)
+ 		err("read");
+ 		return false;
+@@ -104,7 +104,7 @@ int breload()
+ 
+ static int bsave(void)
  {
 -	FILE *f = fopen(filename, "w");
 +	FILE *f = fopen(filename, "w", "ctx=stm");
  	if (f == NULL) {
- 		err("write");
- 		return 0;
-@@ -129,7 +129,7 @@ loop:	if (isend(end))
+ 		const char msg1[] = "Error: Failed to write to: ";
+ 		const char msg2[] = "Press any key to continue.";
+@@ -146,7 +146,7 @@ static void winbounds(void)
  	if (c == 0)
  		r++;
  	end++;
@@ -29,15 +29,15 @@ index b9d5196..fb3e1f2 100644
  		goto loop;
  	else
  		end--;
-@@ -158,6 +158,7 @@ draw(void)
- static void
- doscrl(int d)
+@@ -172,6 +172,7 @@ static void draw(void)
+ 
+ static void doscrl(int d)
  {
 +	clear();
  	lwe_scroll += d;
  	if (lwe_scroll < 0)
  		lwe_scroll = 0;
-@@ -300,7 +301,7 @@ insertmode(char *t)
+@@ -399,7 +400,7 @@ static int insertmode(char *t)
  			c = '\n';
  		if (c == C_D)
  			return 1;
@@ -46,7 +46,7 @@ index b9d5196..fb3e1f2 100644
  			if (t <= buffer)
  				continue;
  			t--;
-@@ -441,12 +442,8 @@ jumptolinecmd(void)
+@@ -601,12 +602,8 @@ static enum loopsig lineoverlaycmd(void)
  
  static command_fn cmdtbl[512] = {
  	[C_D] = scrolldown,
@@ -59,7 +59,7 @@ index b9d5196..fb3e1f2 100644
  	['k'] = scrollup,
  	['q'] = quitcmd,
  	['i'] = insertcmd,
-@@ -493,8 +490,6 @@ main(int argc, char **argv)
+@@ -656,8 +653,6 @@ int main(int argc, char **argv)
  		cbreak();
  		noecho();
  		nonl();
