@@ -387,6 +387,22 @@ static void delete(char *start, char *end)
 	gap -= tn;
 }
 
+static void ruboutword(char **t)
+{
+	// Don't delete letter that our cursor is on otherwise we would
+	// remove the letter after our last entered character in insert mode
+	char *dend = *t - 1;
+	char *dstart = dend;
+	while (dstart && !isspace(*dstart) && (dstart > buffer)) {
+		dstart--;
+	}
+	// Preserve space before cursor when we can, looks better
+	if (dstart != buffer && ((dstart + 1) < dend))
+		dstart++;
+	delete(dstart, dend);
+	*t = dstart;
+}
+
 static int insertmode(char *t)
 {
 	int c;
@@ -406,22 +422,10 @@ static int insertmode(char *t)
 			rubout(t);
 			continue;
 		}
-		if (c == C_W) {	// Remove previous word
-			if (!t || t <= buffer)
+		if (c == C_W) {
+			if (t <= buffer)
 				continue;
-			// Don't delete letter that our cursor is on otherwise we would
-			// remove the letter after our last entered character in insert mode
-			char *dend = t - 1;
-			char *dstart = dend;
-			while (dstart && !isspace(*dstart)
-			       && (dstart > buffer)) {
-				dstart--;
-			}
-			// Preserve space before cursor when we can, looks better
-			if (dstart != buffer && ((dstart + 1) < dend))
-				dstart++;
-			delete(dstart, dend);
-			t = dstart;
+			ruboutword(&t);
 			continue;
 		}
 		if (!isgraph(c) && !isspace(c)) {
