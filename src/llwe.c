@@ -402,6 +402,40 @@ static void delete(char *start, char *end)
 	gap -= tn;
 }
 
+static void movecursor(char *t){
+	if (!t) 
+		return;
+	// Figure out line number, number of tabs on the line,
+	// along with how much space each tab is actually taking up
+	// so we can figure out the offset in order to highlight the cursor
+	int offset = 0;
+	int numtabs = 0;
+	int linenumber = findcharcount(start, t, '\n');
+	char* linestart = startofline(linenumber);
+	if (linestart) {
+		char* iter = linestart;
+			while (iter != t) {
+				if (*iter == '\t') {
+					if (iter != linestart) {
+						const char* const prev = iter - 1;
+						if (*prev == '\t') {
+							offset += TABSIZE;
+							iter++;
+							continue;
+						}
+					}
+					int lineidx = iter - linestart;
+					offset += (TABSIZE - (lineidx % TABSIZE));
+				}
+				else {
+					offset++;
+				}
+				iter++;
+			}
+		move(linenumber, offset);
+	}
+}
+
 static int insertmode(char *t)
 {
 	int c;
@@ -409,16 +443,7 @@ static int insertmode(char *t)
 		draw();
 		if (t > end)
 			doscrl(LINES / 2);
-		// Figure out line number and tabs on the line
-		// so we can highlight the cursor
-		int numtabs = 0;
-		int linenumber = findcharcount(start, t, '\n');
-		char* linestart = startofline(linenumber);
-		if (linestart) {
-			numtabs = findcharcount(linestart, t, '\t');
-			int offset = (t - linestart) + ((numtabs > 0) ? ((numtabs*TABSIZE)-numtabs) : 0);
-			move(linenumber, offset);
-		}
+		movecursor(t);
 		c = getch();
 		if (c == '\r')
 			c = '\n';
