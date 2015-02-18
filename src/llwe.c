@@ -391,11 +391,12 @@ static void ruboutword(char **t)
 {
 	// Don't delete letter that our cursor is on otherwise we would
 	// remove the letter after our last entered character in insert mode
-	char *dend = *t - 1;
+	char *dend = *t;
 	char *dstart = dend;
-	while (dstart && !isspace(*dstart) && (dstart > buffer)) {
+	while (isspace(*dstart) && (dstart > buffer))
 		dstart--;
-	}
+	while (!isspace(*dstart) && (dstart > buffer))
+		dstart--;
 	// Preserve space before cursor when we can, looks better
 	if (dstart != buffer && ((dstart + 1) < dend))
 		dstart++;
@@ -425,6 +426,7 @@ static int insertmode(char *t)
 		if (c == C_W) {
 			if (t <= buffer)
 				continue;
+			t--;
 			ruboutword(&t);
 			continue;
 		}
