@@ -409,7 +409,6 @@ static void movecursor(char *t){
 	// along with how much space each tab is actually taking up
 	// so we can figure out the offset in order to highlight the cursor
 	int offset = 0;
-	int numtabs = 0;
 	int linenumber = findcharcount(start, t, '\n');
 	char* linestart = startofline(linenumber);
 	if (linestart) {
