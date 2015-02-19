@@ -301,38 +301,6 @@ static char *hunt(void)
 	return disamb(c);
 }
 
-static void drawlinelbls(int lvl, int off)
-{
-	erase();
-	move(0, 0);
-	winbounds();
-	for (char *i = start; i != end; i++)
-		pc(*i);
-	int count = 0;
-	int step = skips(lvl) + 1;
-	step = step < 1 ? 1 : step;
-	for (int line = off; line < LINES; line += step) {
-		move(line, 0);
-		ptarg(count++);
-	}
-	refresh();
-}
-
-static bool lineselected(int lvl, int off)
-{
-	return off + skips(lvl) > LINES;
-}
-
-static int getoffset(int lvl, int off)
-{
-	char c = getch();
-	int i = c - 'a';
-	if (i < 0 || i >= 26)
-		return -1;
-	int delta = (skips(lvl) + 1) * i;
-	return off + delta;
-}
-
 static char *startofline(int off)
 {
 	char *result = start;
@@ -350,6 +318,48 @@ static char *endofline(int off)
 {
 	char *nextstart = startofline(off + 1);
 	return nextstart - 1;
+}
+
+static int screenlines(int off)
+{
+	char *start = startofline(off);
+	char *end = endofline(off);
+	int len = end - start;
+	return (len / COLS) + 1;
+}
+
+static void drawlinelbls(int lvl, int off)
+{
+	erase();
+	move(0, 0);
+	winbounds();
+	for (char *i = start; i != end; i++)
+		pc(*i);
+	int count = 0;
+	int step = skips(lvl) + 1;
+	int line = off;
+	while (line < LINES) {
+		move(line, 0);
+		ptarg(count++);
+		int extralines = screenlines(line) - 1;
+		line += step + extralines;
+	}
+	refresh();
+}
+
+static bool lineselected(int lvl, int off)
+{
+	return off + skips(lvl) > LINES;
+}
+
+static int getoffset(int lvl, int off)
+{
+	char c = getch();
+	int i = c - 'a';
+	if (i < 0 || i >= 26)
+		return -1;
+	int delta = (skips(lvl) + 1) * i;
+	return off + delta;
 }
 
 static int linehunt(void)
