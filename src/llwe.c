@@ -272,7 +272,7 @@ static bool onlymatch(char c, int lvl, int toskip)
 	// greater than the count of matching characters in the window,
 	// then we have narrowed it down to just one choice.  The second
 	// match would have to be past the end of the window.
-	return skips(lvl) + toskip >= count(c);
+	return skips(lvl) + toskip + 1 >= count(c);
 }
 
 static char *disamb(char c)
