@@ -603,14 +603,17 @@ static enum loopsig changelinescmd(void)
 
 static enum loopsig lineoverlaycmd(void)
 {
+	winbounds();
 	int lineno = lwe_scroll + 1;
 	int screenline = 0;
+	int fileline = 0;
 	attron(A_STANDOUT);
 	while (screenline < LINES) {
 		char nstr[32];
 		snprintf(nstr, sizeof(nstr), "%4d", lineno);
 		mvaddstr(screenline, 0, nstr);
-		screenline++;
+		screenline += screenlines(fileline);
+		fileline++;
 		lineno++;
 	}
 	attroff(A_STANDOUT);
