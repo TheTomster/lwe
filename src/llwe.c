@@ -317,6 +317,8 @@ static char *startofline(int off)
 static char *endofline(int off)
 {
 	char *nextstart = startofline(off + 1);
+	if (nextstart == NULL)
+		return NULL;
 	return nextstart - 1;
 }
 
@@ -324,6 +326,8 @@ static int screenlines(int off)
 {
 	char *start = startofline(off);
 	char *end = endofline(off);
+	if (start == NULL || end == NULL)
+		return 1;
 	int len = end - start;
 	return (len / COLS) + 1;
 }
