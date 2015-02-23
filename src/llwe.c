@@ -158,21 +158,15 @@ static void winbounds(void)
 {
 	int r = 0, c = 0;
 	start = skipscreenlines(buffer, lwe_scroll);
-	end = start;
-	loop:if (isend(end))
-		return;
-	c++;
-	if (*end == '\n') {
-		c = 0;
+	for (end = start; !isend(end) && r < LINES; end++) {
+		c++;
+		if (*end == '\n')
+			c = 0;
+		c %= COLS;
+		if (c == 0)
+			r++;
 	}
-	c %= COLS;
-	if (c == 0)
-		r++;
-	end++;
-	if (r < LINES)
-		goto loop;
-	else
-		end--;
+	end--;
 }
 
 static void pc(char c)
