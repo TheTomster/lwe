@@ -128,13 +128,37 @@ static int isend(const char *s)
 	return s >= (buffer + bufsize - gapsize());
 }
 
+static char *endofline(char *p)
+{
+	for (; *p != '\n' && p < buffer + gap; p++);
+	return p;
+}
+
+static int screenlines(char *start)
+{
+	char *end = endofline(start);
+	if (start == NULL || end == NULL)
+		return 1;
+	int len = end - start;
+	return (len / COLS) + 1;
+}
+
+static char *skipscreenlines(char *start, int lines)
+{
+	while (lines > 0 && start < buffer + gap) {
+		int n = screenlines(start);
+		lines -= n;
+		start = endofline(start) + 1;
+	}
+	if (start > buffer + gap)
+		start = buffer + gap;
+	return start;
+}
+
 static void winbounds(void)
 {
-	int r, c, i;
-	r = c = 0;
-	for (i = lwe_scroll, start = buffer; i > 0 && !isend(start); (start)++)
-		if (*start == '\n')
-			i--;
+	int r = 0, c = 0;
+	start = skipscreenlines(buffer, lwe_scroll);
 	end = start;
 	loop:if (isend(end))
 		return;
@@ -314,24 +338,6 @@ static char *startofline(int off)
 	return result;
 }
 
-static char *endofline(int off)
-{
-	char *nextstart = startofline(off + 1);
-	if (nextstart == NULL)
-		return NULL;
-	return nextstart - 1;
-}
-
-static int screenlines(int off)
-{
-	char *start = startofline(off);
-	char *end = endofline(off);
-	if (start == NULL || end == NULL)
-		return 1;
-	int len = end - start;
-	return (len / COLS) + 1;
-}
-
 static void drawlinelbls(int lvl, int off)
 {
 	erase();
@@ -345,7 +351,7 @@ static void drawlinelbls(int lvl, int off)
 	while (line < LINES) {
 		move(line, 0);
 		ptarg(count++);
-		int extralines = screenlines(line) - 1;
+		int extralines = screenlines(startofline(line)) - 1;
 		line += step + extralines;
 	}
 	refresh();
@@ -579,7 +585,7 @@ static struct linerange huntlinerange(void)
 		return (struct linerange) {.start = NULL,.end = NULL};
 	orienti(&startoffset, &endoffset);
 	char *start = startofline(startoffset);
-	char *end = endofline(endoffset);
+	char *end = endofline(start);
 	return (struct linerange) {.start = start,.end = end};
 }
 
@@ -612,7 +618,7 @@ static enum loopsig lineoverlaycmd(void)
 		char nstr[32];
 		snprintf(nstr, sizeof(nstr), "%4d", lineno);
 		mvaddstr(screenline, 0, nstr);
-		screenline += screenlines(fileline);
+		screenline += screenlines(startofline(fileline));
 		fileline++;
 		lineno++;
 	}
