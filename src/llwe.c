@@ -146,8 +146,7 @@ static int screenlines(char *start)
 static char *skipscreenlines(char *start, int lines)
 {
 	while (lines > 0 && start < buffer + gap) {
-		int n = screenlines(start);
-		lines -= n;
+		lines -= screenlines(start);
 		start = endofline(start) + 1;
 	}
 	if (start > buffer + gap)
