@@ -1,4 +1,5 @@
 /* A unique cursorless text editor. (c) 2015 Tom Wright */
+#include <assert.h>
 #include <ctype.h>
 #include <curses.h>
 #include <errno.h>
@@ -19,6 +20,11 @@ static int bufsize, gap, lwe_scroll;
 static int gapsize(void)
 {
 	return bufsize - gap;
+}
+
+static bool inbuf(char *p)
+{
+	return p >= buffer && p <= buffer + gap;
 }
 
 static void err(const char *str)
@@ -166,7 +172,8 @@ static void winbounds(void)
 		if (c == 0)
 			r++;
 	}
-	end--;
+	if (end > start) end--;
+	assert(inbuf(start) && inbuf(end));
 }
 
 static void pc(char c)
@@ -182,7 +189,7 @@ static void draw(void)
 	erase();
 	move(0, 0);
 	winbounds();
-	for (i = start; i != end; i++)
+	for (i = start; i < end; i++)
 		pc(*i);
 	refresh();
 }
@@ -322,7 +329,7 @@ static char *startofline(int off)
 {
 	char *result = start;
 	while (off > 0) {
-		if (result >= end)
+		if (!inbuf(result))
 			return NULL;
 		if (*result == '\n')
 			off--;
@@ -344,7 +351,10 @@ static void drawlinelbls(int lvl, int off)
 	while (line < LINES) {
 		move(line, 0);
 		ptarg(count++);
-		int extralines = screenlines(startofline(line)) - 1;
+		char *lstart = startofline(line);
+		if (lstart == NULL)
+			break;
+		int extralines = screenlines(lstart) - 1;
 		line += step + extralines;
 	}
 	refresh();
@@ -572,14 +582,18 @@ static struct linerange huntlinerange(void)
 {
 	int startoffset = linehunt();
 	if (startoffset == -1)
-		return (struct linerange) {.start = NULL,.end = NULL};
+		goto retnull;
 	int endoffset = linehunt();
 	if (endoffset == -1)
-		return (struct linerange) {.start = NULL,.end = NULL};
+		goto retnull;
 	orienti(&startoffset, &endoffset);
 	char *start = startofline(startoffset);
+	if (start == NULL)
+		goto retnull;
 	char *end = endofline(start);
-	return (struct linerange) {.start = start,.end = end};
+	return (struct linerange) {.start = start, .end = end};
+retnull:
+	return (struct linerange) {.start = NULL, .end = NULL};
 }
 
 static enum loopsig deletelinescmd(void)
@@ -611,7 +625,10 @@ static enum loopsig lineoverlaycmd(void)
 		char nstr[32];
 		snprintf(nstr, sizeof(nstr), "%4d", lineno);
 		mvaddstr(screenline, 0, nstr);
-		screenline += screenlines(startofline(fileline));
+		char *lstart = startofline(fileline);
+		if (lstart == NULL)
+			break;
+		screenline += screenlines(lstart);
 		fileline++;
 		lineno++;
 	}
