@@ -590,7 +590,10 @@ static struct linerange huntlinerange(void)
 	char *start = startofline(startoffset);
 	if (start == NULL)
 		goto retnull;
-	char *end = endofline(start);
+	char *lstart = startofline(endoffset);
+	if (lstart == NULL)
+		goto retnull;
+	char *end = endofline(lstart);
 	return (struct linerange) {.start = start, .end = end};
 retnull:
 	return (struct linerange) {.start = NULL, .end = NULL};
