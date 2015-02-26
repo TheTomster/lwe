@@ -325,37 +325,33 @@ static char *hunt(void)
 	return disamb(c);
 }
 
-static char *startofline(int off)
+static void nextline(char **p)
 {
-	char *result = start;
-	while (off > 0) {
-		if (!inbuf(result))
-			return NULL;
-		if (*result == '\n')
-			off--;
-		result++;
-	}
-	return result;
+	assert(inbuf(*p));
+	for (;*p < buffer + gap; (*p)++)
+		if (**p == '\n') {
+			(*p)++;
+			break;
+		}
+	assert(inbuf(*p));
 }
 
 static void drawlinelbls(int lvl, int off)
 {
-	erase();
-	move(0, 0);
-	winbounds();
-	for (char *i = start; i != end; i++)
-		pc(*i);
+	draw();
 	int count = 0;
-	int step = skips(lvl) + 1;
-	int line = off;
-	while (line < LINES) {
-		move(line, 0);
-		ptarg(count++);
-		char *lstart = startofline(line);
-		if (lstart == NULL)
-			break;
-		int extralines = screenlines(lstart) - 1;
-		line += step + extralines;
+	char *p = start;
+	int toskip = off;
+	for (int line = 0; line < LINES;) {
+		if (toskip == 0) {
+			move(line, 0);
+			ptarg(count++);
+			toskip = skips(lvl);
+		} else {
+			toskip--;
+		}
+		line += screenlines(p);
+		nextline(&p);
 	}
 	refresh();
 }
@@ -577,6 +573,19 @@ struct linerange {
 	char *start;
 	char *end;
 };
+
+static char *startofline(int off)
+{
+	char *result = start;
+	while (off > 0) {
+		if (!inbuf(result))
+			return NULL;
+		if (*result == '\n')
+			off--;
+		result++;
+	}
+	return result;
+}
 
 static struct linerange huntlinerange(void)
 {
