@@ -1,8 +1,8 @@
 diff --git a/src/llwe.c b/src/llwe.c
-index 12b678c..9eb372e 100644
+index e6b2987..9e30e53 100644
 --- a/src/llwe.c
 +++ b/src/llwe.c
-@@ -65,7 +65,7 @@ static bool initbuf(int sz)
+@@ -71,7 +71,7 @@ static bool initbuf(int sz)
  
  static bool filetobuf(int sz)
  {
@@ -11,7 +11,7 @@ index 12b678c..9eb372e 100644
  	if (f == NULL) {
  		err("read");
  		return false;
-@@ -104,7 +104,7 @@ int breload()
+@@ -110,7 +110,7 @@ int breload()
  
  static int bsave(void)
  {
@@ -20,16 +20,16 @@ index 12b678c..9eb372e 100644
  	if (f == NULL) {
  		const char msg1[] = "Error: Failed to write to: ";
  		const char msg2[] = "Press any key to continue.";
-@@ -146,7 +146,7 @@ static void winbounds(void)
- 	if (c == 0)
- 		r++;
- 	end++;
--	if (r < LINES)
-+	if (r < LINES - 1)
- 		goto loop;
- 	else
- 		end--;
-@@ -172,6 +172,7 @@ static void draw(void)
+@@ -164,7 +164,7 @@ static void winbounds(void)
+ {
+ 	int r = 0, c = 0;
+ 	start = skipscreenlines(buffer, lwe_scroll);
+-	for (end = start; !isend(end) && r < LINES; end++) {
++	for (end = start; !isend(end) && r < LINES - 1; end++) {
+ 		c++;
+ 		if (*end == '\n')
+ 			c = 0;
+@@ -196,6 +196,7 @@ static void draw(void)
  
  static void doscrl(int d)
  {
@@ -39,14 +39,14 @@ index 12b678c..9eb372e 100644
  		lwe_scroll = 0;
 @@ -342,7 +343,7 @@ static void drawlinelbls(int lvl, int off)
  	int count = 0;
- 	int step = skips(lvl) + 1;
- 	int line = off;
--	while (line < LINES) {
-+	while (line < LINES - 1) {
- 		move(line, 0);
- 		ptarg(count++);
- 		int extralines = screenlines(line) - 1;
-@@ -430,7 +431,7 @@ static int insertmode(char *t)
+ 	char *p = start;
+ 	int toskip = off;
+-	for (int line = 0; line < LINES;) {
++	for (int line = 0; line < LINES - 1;) {
+ 		if (toskip == 0) {
+ 			move(line, 0);
+ 			ptarg(count++);
+@@ -435,7 +436,7 @@ static int insertmode(char *t)
  			c = '\n';
  		if (c == C_D)
  			return 1;
@@ -55,7 +55,16 @@ index 12b678c..9eb372e 100644
  			if (t <= buffer)
  				continue;
  			t--;
-@@ -624,12 +625,8 @@ static enum loopsig lineoverlaycmd(void)
+@@ -633,7 +634,7 @@ static enum loopsig lineoverlaycmd(void)
+ 	int screenline = 0;
+ 	int fileline = 0;
+ 	attron(A_STANDOUT);
+-	while (screenline < LINES) {
++	while (screenline < LINES - 1) {
+ 		char nstr[32];
+ 		snprintf(nstr, sizeof(nstr), "%4d", lineno);
+ 		mvaddstr(screenline, 0, nstr);
+@@ -652,12 +653,8 @@ static enum loopsig lineoverlaycmd(void)
  
  static command_fn cmdtbl[512] = {
  	[C_D] = scrolldown,
@@ -68,7 +77,7 @@ index 12b678c..9eb372e 100644
  	['k'] = scrollup,
  	['q'] = quitcmd,
  	['i'] = insertcmd,
-@@ -679,8 +676,6 @@ int main(int argc, char **argv)
+@@ -707,8 +704,6 @@ int main(int argc, char **argv)
  		cbreak();
  		noecho();
  		nonl();
