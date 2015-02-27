@@ -14,8 +14,10 @@
 #define C_W 23
 
 static char *filename, *buffer, *start, *end;
-char errbuf[256];
+static char errbuf[256];
 static int bufsize, gap, lwe_scroll;
+static char *kills[26];
+static int killsizes[26];
 
 static int gapsize(void)
 {
@@ -395,13 +397,30 @@ static void rubout(char *t)
 	gap--;
 }
 
+static void shiftring(void)
+{
+	if (kills[25] != NULL)
+		free(kills[25]);
+	memmove(&kills[1], &kills[0], sizeof(kills[0]) * 25);
+}
+
+static void kill(char *start, char *end)
+{
+	shiftring();
+	int sz = end - start;
+	assert(sz >= 0);
+	killsizes[0] = sz;
+	kills[0] = malloc(sz);
+	memcpy(kills[0], start, sz);
+}
+
 static void delete(char *start, char *end)
 {
-	int n, tn;
-	if (end < buffer + gap)
+	kill(start, end);
+	if (end != buffer + gap)
 		end++;
-	n = buffer + bufsize - end;
-	tn = end - start;
+	int n = buffer + bufsize - end;
+	int tn = end - start;
 	memmove(start, end, n);
 	gap -= tn;
 }
