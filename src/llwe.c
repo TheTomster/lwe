@@ -398,7 +398,7 @@ static void rubout(char *t)
 static void delete(char *start, char *end)
 {
 	int n, tn;
-	if (end != buffer + bufsize)
+	if (end < buffer + gap)
 		end++;
 	n = buffer + bufsize - end;
 	tn = end - start;
