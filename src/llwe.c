@@ -102,7 +102,7 @@ static bool bread(void)
 	}
 }
 
-int breload()
+static int breload()
 {
 	free(buffer);
 	return bread();
@@ -461,14 +461,14 @@ static int insertmode(char *t)
 }
 
 enum loopsig {
-	sigcont,
-	sigquit,
-	sigerror
+	LOOP_SIGCNT,
+	LOOP_SIGQUIT,
+	LOOP_SIGERR
 };
 
 static enum loopsig checksig(bool ok)
 {
-	return ok ? sigcont : sigerror;
+	return ok ? LOOP_SIGCNT : LOOP_SIGERR;
 }
 
 typedef enum loopsig (*command_fn) (void);
@@ -476,18 +476,18 @@ typedef enum loopsig (*command_fn) (void);
 static enum loopsig scrolldown(void)
 {
 	doscrl(LINES / 2);
-	return sigcont;
+	return LOOP_SIGCNT;
 }
 
 static enum loopsig scrollup(void)
 {
 	doscrl(-LINES / 2);
-	return sigcont;
+	return LOOP_SIGCNT;
 }
 
 static enum loopsig quitcmd(void)
 {
-	return sigquit;
+	return LOOP_SIGQUIT;
 }
 
 static enum loopsig insertcmd(void)
@@ -526,23 +526,23 @@ static enum loopsig deletecmd(void)
 {
 	char *start = hunt();
 	if (start == NULL)
-		return sigcont;
+		return LOOP_SIGCNT;
 	char *end = hunt();
 	if (end == NULL)
-		return sigcont;
+		return LOOP_SIGCNT;
 	orient(&start, &end);
 	delete(start, end);
-	return sigcont;
+	return LOOP_SIGCNT;
 }
 
 static enum loopsig changecmd(void)
 {
 	char *start = hunt();
 	if (start == NULL)
-		return sigcont;
+		return LOOP_SIGCNT;
 	char *end = hunt();
 	if (end == NULL)
-		return sigcont;
+		return LOOP_SIGCNT;
 	orient(&start, &end);
 	delete(start, end);
 	return checksig(insertmode(start));
@@ -551,13 +551,13 @@ static enum loopsig changecmd(void)
 static enum loopsig reloadcmd(void)
 {
 	breload();
-	return sigcont;
+	return LOOP_SIGCNT;
 }
 
 static enum loopsig jumptolinecmd(void)
 {
 	jumptoline();
-	return sigcont;
+	return LOOP_SIGCNT;
 }
 
 static void orienti(int *a, int *b)
@@ -612,16 +612,16 @@ static enum loopsig deletelinescmd(void)
 {
 	struct linerange r = huntlinerange();
 	if (r.start == NULL || r.end == NULL)
-		return sigcont;
+		return LOOP_SIGCNT;
 	delete(r.start, r.end);
-	return sigcont;
+	return LOOP_SIGCNT;
 }
 
 static enum loopsig changelinescmd(void)
 {
 	struct linerange r = huntlinerange();
 	if (r.start == NULL || r.end == NULL)
-		return sigcont;
+		return LOOP_SIGCNT;
 	delete(r.start, r.end);
 	return checksig(insertmode(r.start));
 }
@@ -647,7 +647,7 @@ static enum loopsig lineoverlaycmd(void)
 	attroff(A_STANDOUT);
 	refresh();
 	getch();
-	return sigcont;
+	return LOOP_SIGCNT;
 }
 
 static command_fn cmdtbl[512] = {
@@ -681,9 +681,9 @@ static int cmdloop(void)
 		if (cmd == NULL)
 			continue;
 		enum loopsig s = cmd();
-		if (s == sigquit)
+		if (s == LOOP_SIGQUIT)
 			return 1;
-		else if (s == sigerror)
+		else if (s == LOOP_SIGERR)
 			return 0;
 	}
 	return 0;
