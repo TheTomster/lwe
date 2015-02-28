@@ -16,8 +16,8 @@
 static char *filename, *buffer, *start, *end;
 static char errbuf[256];
 static int bufsize, gap, lwe_scroll;
-static char *kills[26];
-static int killsizes[26];
+static char *yanks[26];
+static int yanksizes[26];
 
 static int gapsize(void)
 {
@@ -399,24 +399,24 @@ static void rubout(char *t)
 
 static void shiftring(void)
 {
-	if (kills[25] != NULL)
-		free(kills[25]);
-	memmove(&kills[1], &kills[0], sizeof(kills[0]) * 25);
+	if (yanks[25] != NULL)
+		free(yanks[25]);
+	memmove(&yanks[1], &yanks[0], sizeof(yanks[0]) * 25);
 }
 
-static void kill(char *start, char *end)
+static void yank(char *start, char *end)
 {
 	shiftring();
 	int sz = end - start;
 	assert(sz >= 0);
-	killsizes[0] = sz;
-	kills[0] = malloc(sz);
-	memcpy(kills[0], start, sz);
+	yanksizes[0] = sz;
+	yanks[0] = malloc(sz);
+	memcpy(yanks[0], start, sz);
 }
 
 static void delete(char *start, char *end)
 {
-	kill(start, end);
+	yank(start, end);
 	if (end != buffer + gap)
 		end++;
 	int n = buffer + bufsize - end;
@@ -669,6 +669,27 @@ static enum loopsig lineoverlaycmd(void)
 	return LOOP_SIGCNT;
 }
 
+static enum loopsig yankcmd(void)
+{
+	char *start = hunt();
+	if (start == NULL)
+		return LOOP_SIGCNT;
+	char *end = hunt();
+	if (end == NULL)
+		return LOOP_SIGCNT;
+	yank(start, end);
+	return LOOP_SIGCNT;
+}
+
+static enum loopsig yanklinescmd(void)
+{
+	struct linerange r = huntlinerange();
+	if (r.start == NULL || r.end == NULL)
+		return LOOP_SIGCNT;
+	yank(r.start, r.end);
+	return LOOP_SIGCNT;
+}
+
 static command_fn cmdtbl[512] = {
 	[C_D] = scrolldown,
 	[KEY_DOWN] = scrolldown,
@@ -688,7 +709,9 @@ static command_fn cmdtbl[512] = {
 	['g'] = jumptolinecmd,
 	['D'] = deletelinescmd,
 	['C'] = changelinescmd,
-	['n'] = lineoverlaycmd
+	['n'] = lineoverlaycmd,
+	['y'] = yankcmd,
+	['Y'] = yanklinescmd
 };
 
 static int cmdloop(void)
