@@ -580,6 +580,62 @@ static enum loopsig yanklinescmd(void)
 	return LOOP_SIGCNT;
 }
 
+struct yankstr {
+	char *start;
+	char *end;
+};
+
+static struct yankstr yankhunt(void)
+{
+	clear();
+	int linestodraw = 26 < LINES ? 26 : LINES;
+	for (int i = 0; i < linestodraw; i++) {
+		attron(A_STANDOUT);
+		mvaddch(i, 0, 'a' + i);
+		attroff(A_STANDOUT);
+		int previewsz = COLS - 2;
+		char preview[previewsz];
+		snprintf(preview, previewsz, "%s", yanks[i]);
+		for (int j = 0; j < yanksizes[i] && j < previewsz; j++) {
+			char c = preview[j];
+			c = (isgraph(c) || c == ' ') ? c : '?';
+			addch(c);
+		}
+	}
+	refresh();
+	int selected = getch() - 'a';
+	if (selected < 0 || selected > 25)
+		return (struct yankstr) {NULL, NULL};
+	struct yankstr result;
+	result.start = yanks[selected];
+	result.end = result.start + yanksizes[selected];
+	return result;
+}
+
+static enum loopsig putcmd(void)
+{
+	char *t = hunt();
+	if (t == NULL)
+		return LOOP_SIGCNT;
+	struct yankstr y = yankhunt();
+	if (y.start == NULL || y.end == NULL)
+		return LOOP_SIGCNT;
+	return checksig(bufinsertstr(y.start, y.end, t));
+}
+
+static enum loopsig preputcmd(void)
+{
+	char *t = hunt();
+	if (t == NULL)
+		return LOOP_SIGCNT;
+	if (t != getbufend())
+		t++;
+	struct yankstr y = yankhunt();
+	if (y.start == NULL || y.end == NULL)
+		return LOOP_SIGCNT;
+	return checksig(bufinsertstr(y.start, y.end, t));
+}
+
 static command_fn cmdtbl[512] = {
 	[C_D] = scrolldown,
 	[KEY_DOWN] = scrolldown,
@@ -601,7 +657,9 @@ static command_fn cmdtbl[512] = {
 	['C'] = changelinescmd,
 	['n'] = lineoverlaycmd,
 	['y'] = yankcmd,
-	['Y'] = yanklinescmd
+	['Y'] = yanklinescmd,
+	['p'] = putcmd,
+	['P'] = preputcmd
 };
 
 static int cmdloop(void)
