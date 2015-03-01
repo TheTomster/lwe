@@ -659,7 +659,7 @@ static command_fn cmdtbl[512] = {
 	['y'] = yankcmd,
 	['Y'] = yanklinescmd,
 	['p'] = putcmd,
-	['P'] = preputcmd
+	['o'] = preputcmd
 };
 
 static int cmdloop(void)
