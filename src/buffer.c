@@ -91,6 +91,7 @@ static bool bufextend(void)
 
 bool bufinsert(char c, char *t)
 {
+	assert(overalloc_sz() > 0);
 	int sztomove = contentsz - (t - buffer);
 	memmove(t + 1, t, sztomove);
 	*t = c;
@@ -110,22 +111,9 @@ bool bufinsertstr(char *start, char *end, char *t)
 {
 	assert(inbuf(t));
 	assert(end >= start);
-	int sztoinsert = end - start;
-	if (sztoinsert == 0)
-		return true;
-	/* Extending the buffer will invalidate pointers, so we need to use an
-	 * offset instead for the target.  We'll also assert that the start and
-	 * end aren't in the buffer... maybe that can be added later. */
-	int t_offset = t - buffer;
-	assert(!inbuf(start) && !inbuf(end));
-	while (overalloc_sz() < sztoinsert)
-		if (!bufextend())
+	for (char *i = start; i < end; i++)
+		if (!bufinsert(*i, t++))
 			return false;
-	t = buffer + t_offset;
-	/* Now the buffer has been resized if needed, and t is reset to point
-	 * into the new buffer. */
-	memmove(t + sztoinsert, t, sztoinsert);
-	memcpy(t, start, sztoinsert);
 	return true;
 }
 
