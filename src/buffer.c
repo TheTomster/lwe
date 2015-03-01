@@ -64,6 +64,7 @@ static bool filetobuf(char *path, int sz)
 		seterr("read");
 		return false;
 	}
+	contentsz += sz;
 	return true;
 }
 
