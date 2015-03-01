@@ -1,4 +1,6 @@
-LDLIBS=-lcurses
+LDLIBS = -lcurses
 
-llwe: src/llwe.c
-	$(CC) $(CFLAGS) $(LDFLAGS) -o llwe src/llwe.c $(LDLIBS)
+OBJS = src/llwe.o src/err.o src/buffer.o
+
+llwe: $(OBJS)
+	$(CC) $(CFLAGS) $(LDFLAGS) -o llwe $(OBJS) $(LDLIBS)
