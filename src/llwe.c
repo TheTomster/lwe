@@ -705,14 +705,11 @@ int main(int argc, char **argv)
 		ed();
 
 		endwin();
-
-		geterr(errbuf, sizeof(errbuf));
-		if (strcmp(errbuf, ""))
-			goto error;
-
-		return 0;
 	}
 	error:
+	geterr(errbuf, sizeof(errbuf));
+	if (errbuf[0] == '\0')
+		return 0;
 	fprintf(stderr, "error: %s\n", errbuf);
 	return 1;
 }
