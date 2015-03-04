@@ -67,6 +67,8 @@ static void winbounds(void)
 
 static void pc(char c)
 {
+	if (c == '\r')
+		c = '?';
 	if (!isgraph(c) && !isspace(c))
 		c = '?';
 	addch(c);
