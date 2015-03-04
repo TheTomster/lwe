@@ -281,6 +281,7 @@ static void shiftring(void)
 	if (yanks[25] != NULL)
 		free(yanks[25]);
 	memmove(&yanks[1], &yanks[0], sizeof(yanks[0]) * 25);
+	memmove(&yanksizes[1], &yanksizes[0], sizeof(yanksizes[0]) * 25);
 }
 
 static void yank(char *start, char *end)
@@ -295,9 +296,9 @@ static void yank(char *start, char *end)
 
 static void delete(char *start, char *end)
 {
-	yank(start, end);
 	if (end != getbufend())
 		end++;
+	yank(start, end);
 	bufdelete(start, end);
 }
 
@@ -612,7 +613,7 @@ static struct yankstr yankhunt(void)
 	return result;
 }
 
-static enum loopsig putcmd(void)
+static enum loopsig preputcmd(void)
 {
 	char *t = hunt();
 	if (t == NULL)
@@ -623,7 +624,7 @@ static enum loopsig putcmd(void)
 	return checksig(bufinsertstr(y.start, y.end, t));
 }
 
-static enum loopsig preputcmd(void)
+static enum loopsig putcmd(void)
 {
 	char *t = hunt();
 	if (t == NULL)
