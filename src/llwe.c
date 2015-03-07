@@ -93,7 +93,7 @@ static void drawmodeline(void)
 {
 	int r = LINES - 1;
 	char buf[8192];
-	snprintf(buf, sizeof(buf), "[F: %-32s][%-24s][%8d]", filename, mode, lwe_scroll);
+	snprintf(buf, sizeof(buf), "[F: %-32s][M: %-24s][L: %8d]", filename, mode, lwe_scroll);
 	attron(COLOR_PAIR(LLWE_CYAN));
 	mvaddstr(r, 0, buf);
 	attroff(COLOR_PAIR(LLWE_CYAN));
