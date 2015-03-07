@@ -1,159 +1,74 @@
 /* A unique cursorless text editor. (c) 2015 Tom Wright */
+#include <assert.h>
 #include <ctype.h>
 #include <curses.h>
-#include <errno.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/stat.h>
+
+#include "buffer.h"
+#include "err.h"
 
 #define C_D 4
 #define C_U 21
 #define C_W 23
 
-static char *filename, *buffer, *start, *end;
-char errbuf[256];
-static int bufsize, gap, lwe_scroll;
+static char *filename, *start, *end;
+static int lwe_scroll;
+static char *yanks[26];
+static int yanksizes[26];
 
-static int gapsize(void)
+#define inbuf(p) (p >= getbufptr() && p <= getbufend())
+#define bufempty() (getbufptr() == getbufend())
+
+static char *endofline(char *p)
 {
-	return bufsize - gap;
+	assert(inbuf(p));
+	for (; p != getbufend() && *p != '\n'; p++);
+	return p;
 }
 
-static void err(const char *str)
+static int screenlines(char *start)
 {
-	snprintf(errbuf, sizeof(errbuf), "%s", str);
-}
-
-static bool bext(void)
-{
-	int newsize = bufsize * 2;
-	buffer = realloc(buffer, newsize);
-	if (buffer == NULL) {
-		err("memory");
-		return false;
-	}
-	bufsize = newsize;
-	return true;
-}
-
-static bool bins(char c, char *t)
-{
-	int sz;
-	sz = gap - (t - buffer);
-	memmove(t + 1, t, sz);
-	*t = c;
-	gap++;
-	if (gapsize() == 0)
-		return bext();
-	else
-		return true;
-}
-
-static bool initbuf(int sz)
-{
-	bufsize = sz + 4096;
-	gap = sz;
-	buffer = malloc(bufsize);
-	if (buffer == NULL) {
-		err("memory");
-		return false;
-	}
-	return true;
-}
-
-static bool filetobuf(int sz)
-{
-	FILE *f = fopen(filename, "r");
-	if (f == NULL) {
-		err("read");
-		return false;
-	}
-	int rsz = fread(buffer, 1, sz, f);
-	if (rsz != sz) {
-		err("read");
-		return false;
-	}
-	return true;
-}
-
-static bool bread(void)
-{
-	struct stat st;
-	errno = 0;
-	stat(filename, &st);
-	if (errno == 0) {
-		bool ok = initbuf(st.st_size);
-		if (!ok)
-			return false;
-		return filetobuf(st.st_size);
-	} else if (errno == ENOENT) {
-		return initbuf(0);
-	} else {
-		err(strerror(errno));
-		return false;
-	}
-}
-
-int breload()
-{
-	free(buffer);
-	return bread();
-}
-
-static int bsave(void)
-{
-	FILE *f = fopen(filename, "w");
-	if (f == NULL) {
-		const char msg1[] = "Error: Failed to write to: ";
-		const char msg2[] = "Press any key to continue.";
-		char nstr[strlen(msg1) + strlen(filename) + 1];
-		snprintf(nstr, sizeof(nstr), "%s%s", msg1, filename);
-		attron(A_STANDOUT);
-		mvaddstr(LINES-2, 0, nstr);
-		mvaddstr(LINES-1, 0, msg2);
-		attroff(A_STANDOUT);
-		refresh();
-		getch();
+	char *end = endofline(start);
+	if (start == NULL || end == NULL)
 		return 1;
-	}
-	fwrite(buffer, 1, bufsize - gapsize(), f);
-	fclose(f);
-	return 1;
+	int len = end - start;
+	return (len / COLS) + 1;
 }
 
-static int isend(const char *s)
+static char *skipscreenlines(char *start, int lines)
 {
-	return s >= (buffer + bufsize - gapsize());
+	assert(inbuf(start));
+	while (lines > 0 && start < getbufend()) {
+		lines -= screenlines(start);
+		start = endofline(start) + 1;
+	}
+	start = start > getbufend() ? getbufend() : start;
+	return start;
 }
 
 static void winbounds(void)
 {
-	int r, c, i;
-	r = c = 0;
-	for (i = lwe_scroll, start = buffer; i > 0 && !isend(start); (start)++)
-		if (*start == '\n')
-			i--;
-	end = start;
-	loop:if (isend(end))
-		return;
-	c++;
-	if (*end == '\n') {
-		c = 0;
+	int r = 0, c = 0;
+	start = skipscreenlines(getbufptr(), lwe_scroll);
+	for (end = start; end != getbufend() && r < LINES; end++) {
+		c++;
+		if (*end == '\n')
+			c = 0;
+		c %= COLS;
+		if (c == 0)
+			r++;
 	}
-	c %= COLS;
-	if (c == 0)
-		r++;
-	end++;
-	if (r < LINES)
-		goto loop;
-	else
-		end--;
+	if (end > start) end--;
+	assert(inbuf(start) && inbuf(end));
 }
 
 static void pc(char c)
 {
+	if (c == '\r')
+		c = '?';
 	if (!isgraph(c) && !isspace(c))
 		c = '?';
 	addch(c);
@@ -165,7 +80,7 @@ static void draw(void)
 	erase();
 	move(0, 0);
 	winbounds();
-	for (i = start; i != end; i++)
+	for (i = start; i < end; i++)
 		pc(*i);
 	refresh();
 }
@@ -287,7 +202,7 @@ static bool onlymatch(char c, int lvl, int toskip)
 	// greater than the count of matching characters in the window,
 	// then we have narrowed it down to just one choice.  The second
 	// match would have to be past the end of the window.
-	return skips(lvl) + toskip >= count(c);
+	return skips(lvl) + toskip + 1 >= count(c);
 }
 
 static char *disamb(char c)
@@ -309,26 +224,40 @@ static char *disamb(char c)
 static char *hunt(void)
 {
 	char c;
-	if (gapsize() == bufsize)
-		return buffer;
+	if (bufempty())
+		return getbufptr();
 	draw();
 	c = getch();
 	return disamb(c);
 }
 
+static void nextline(char **p)
+{
+	assert(inbuf(*p));
+	for (;*p < getbufend(); (*p)++)
+		if (**p == '\n') {
+			(*p)++;
+			break;
+		}
+	assert(inbuf(*p));
+}
+
 static void drawlinelbls(int lvl, int off)
 {
-	erase();
-	move(0, 0);
-	winbounds();
-	for (char *i = start; i != end; i++)
-		pc(*i);
+	draw();
 	int count = 0;
-	int step = skips(lvl) + 1;
-	step = step < 1 ? 1 : step;
-	for (int line = off; line < LINES; line += step) {
-		move(line, 0);
-		ptarg(count++);
+	char *p = start;
+	int toskip = off;
+	for (int line = 0; line < LINES;) {
+		if (toskip == 0) {
+			move(line, 0);
+			ptarg(count++);
+			toskip = skips(lvl);
+		} else {
+			toskip--;
+		}
+		line += screenlines(p);
+		nextline(&p);
 	}
 	refresh();
 }
@@ -348,30 +277,11 @@ static int getoffset(int lvl, int off)
 	return off + delta;
 }
 
-static char *startofline(int off)
-{
-	char *result = start;
-	while (off > 0) {
-		if (result >= end)
-			return NULL;
-		if (*result == '\n')
-			off--;
-		result++;
-	}
-	return result;
-}
-
-static char *endofline(int off)
-{
-	char *nextstart = startofline(off + 1);
-	return nextstart - 1;
-}
-
 static int linehunt(void)
 {
 	int lvl = 0;
 	int off = 0;
-	if (gapsize() == bufsize)
+	if (bufempty())
 		return -1;
 	while (!lineselected(lvl, off)) {
 		drawlinelbls(lvl, off);
@@ -383,23 +293,47 @@ static int linehunt(void)
 	return off;
 }
 
-static void rubout(char *t)
+static void shiftring(void)
 {
-	int sz;
-	sz = gap - (t + 1 - buffer);
-	memmove(t, t + 1, sz);
-	gap--;
+	if (yanks[25] != NULL)
+		free(yanks[25]);
+	memmove(&yanks[1], &yanks[0], sizeof(yanks[0]) * 25);
+	memmove(&yanksizes[1], &yanksizes[0], sizeof(yanksizes[0]) * 25);
+}
+
+static void yank(char *start, char *end)
+{
+	shiftring();
+	int sz = end - start;
+	assert(sz >= 0);
+	yanksizes[0] = sz;
+	yanks[0] = malloc(sz);
+	memcpy(yanks[0], start, sz);
 }
 
 static void delete(char *start, char *end)
 {
-	int n, tn;
-	if (end != buffer + bufsize)
+	if (end != getbufend())
 		end++;
-	n = buffer + bufsize - end;
-	tn = end - start;
-	memmove(start, end, n);
-	gap -= tn;
+	yank(start, end);
+	bufdelete(start, end);
+}
+
+static void ruboutword(char **t)
+{
+	// Don't delete letter that our cursor is on otherwise we would
+	// remove the letter after our last entered character in insert mode
+	char *dend = *t;
+	char *dstart = dend;
+	while (isspace(*dstart) && (dstart > getbufptr()))
+		dstart--;
+	while (!isspace(*dstart) && (dstart > getbufptr()))
+		dstart--;
+	// Preserve space before cursor when we can, looks better
+	if (dstart != getbufptr() && ((dstart + 1) < dend))
+		dstart++;
+	delete(dstart, dend);
+	*t = dstart;
 }
 
 static void movecursor(char *t){
@@ -449,34 +383,23 @@ static int insertmode(char *t)
 		if (c == C_D)
 			return 1;
 		if (c == KEY_BACKSPACE) {
-			if (t <= buffer)
+			if (t <= getbufptr())
 				continue;
 			t--;
-			rubout(t);
+			bufdelete(t, t + 1);
 			continue;
 		}
-		if (c == C_W) {	// Remove previous word
-			if (!t || t <= buffer)
+		if (c == C_W) {
+			if (t <= getbufptr())
 				continue;
-			// Don't delete letter that our cursor is on otherwise we would
-			// remove the letter after our last entered character in insert mode
-			char *dend = t - 1;
-			char *dstart = dend;
-			while (dstart && !isspace(*dstart)
-			       && (dstart > buffer)) {
-				dstart--;
-			}
-			// Preserve space before cursor when we can, looks better
-			if (dstart != buffer && ((dstart + 1) < dend))
-				dstart++;
-			delete(dstart, dend);
-			t = dstart;
+			t--;
+			ruboutword(&t);
 			continue;
 		}
 		if (!isgraph(c) && !isspace(c)) {
 			continue;
 		}
-		if (!bins(c, t))
+		if (!bufinsert(c, t))
 			return 0;
 		else
 			t++;
@@ -485,14 +408,14 @@ static int insertmode(char *t)
 }
 
 enum loopsig {
-	sigcont,
-	sigquit,
-	sigerror
+	LOOP_SIGCNT,
+	LOOP_SIGQUIT,
+	LOOP_SIGERR
 };
 
 static enum loopsig checksig(bool ok)
 {
-	return ok ? sigcont : sigerror;
+	return ok ? LOOP_SIGCNT : LOOP_SIGERR;
 }
 
 typedef enum loopsig (*command_fn) (void);
@@ -500,18 +423,18 @@ typedef enum loopsig (*command_fn) (void);
 static enum loopsig scrolldown(void)
 {
 	doscrl(LINES / 2);
-	return sigcont;
+	return LOOP_SIGCNT;
 }
 
 static enum loopsig scrollup(void)
 {
 	doscrl(-LINES / 2);
-	return sigcont;
+	return LOOP_SIGCNT;
 }
 
 static enum loopsig quitcmd(void)
 {
-	return sigquit;
+	return LOOP_SIGQUIT;
 }
 
 static enum loopsig insertcmd(void)
@@ -527,14 +450,26 @@ static enum loopsig appendcmd(void)
 	char *start = hunt();
 	if (start == NULL)
 		return false;
-	if (start != buffer + bufsize)
+	if (start != getbufend())
 		start++;
 	return checksig(insertmode(start));
 }
 
 static enum loopsig writecmd(void)
 {
-	return checksig(bsave());
+	if (!bufwrite(filename)) {
+		const char msg1[] = "Error: Failed to write to: ";
+		const char msg2[] = "Press any key to continue.";
+		char nstr[strlen(msg1) + strlen(filename) + 1];
+		snprintf(nstr, sizeof(nstr), "%s%s", msg1, filename);
+		attron(A_STANDOUT);
+		mvaddstr(LINES-2, 0, nstr);
+		mvaddstr(LINES-1, 0, msg2);
+		attroff(A_STANDOUT);
+		refresh();
+		getch();
+	}
+	return LOOP_SIGCNT;
 }
 
 static void orient(char **start, char **end)
@@ -550,23 +485,23 @@ static enum loopsig deletecmd(void)
 {
 	char *start = hunt();
 	if (start == NULL)
-		return sigcont;
+		return LOOP_SIGCNT;
 	char *end = hunt();
 	if (end == NULL)
-		return sigcont;
+		return LOOP_SIGCNT;
 	orient(&start, &end);
 	delete(start, end);
-	return sigcont;
+	return LOOP_SIGCNT;
 }
 
 static enum loopsig changecmd(void)
 {
 	char *start = hunt();
 	if (start == NULL)
-		return sigcont;
+		return LOOP_SIGCNT;
 	char *end = hunt();
 	if (end == NULL)
-		return sigcont;
+		return LOOP_SIGCNT;
 	orient(&start, &end);
 	delete(start, end);
 	return checksig(insertmode(start));
@@ -574,14 +509,16 @@ static enum loopsig changecmd(void)
 
 static enum loopsig reloadcmd(void)
 {
-	breload();
-	return sigcont;
+	bool ok = bufread(filename);
+	if (!ok)
+		return LOOP_SIGERR;
+	return LOOP_SIGCNT;
 }
 
 static enum loopsig jumptolinecmd(void)
 {
 	jumptoline();
-	return sigcont;
+	return LOOP_SIGCNT;
 }
 
 static void orienti(int *a, int *b)
@@ -598,54 +535,157 @@ struct linerange {
 	char *end;
 };
 
+static char *startofline(int off)
+{
+	char *result = start;
+	while (off > 0) {
+		if (!inbuf(result))
+			return NULL;
+		if (*result == '\n')
+			off--;
+		result++;
+	}
+	return result;
+}
+
 static struct linerange huntlinerange(void)
 {
 	int startoffset = linehunt();
 	if (startoffset == -1)
-		return (struct linerange) {.start = NULL,.end = NULL};
+		goto retnull;
 	int endoffset = linehunt();
 	if (endoffset == -1)
-		return (struct linerange) {.start = NULL,.end = NULL};
+		goto retnull;
 	orienti(&startoffset, &endoffset);
 	char *start = startofline(startoffset);
-	char *end = endofline(endoffset);
-	return (struct linerange) {.start = start,.end = end};
+	if (start == NULL)
+		goto retnull;
+	char *lstart = startofline(endoffset);
+	if (lstart == NULL)
+		goto retnull;
+	char *end = endofline(lstart);
+	return (struct linerange) {.start = start, .end = end};
+retnull:
+	return (struct linerange) {.start = NULL, .end = NULL};
 }
 
 static enum loopsig deletelinescmd(void)
 {
 	struct linerange r = huntlinerange();
 	if (r.start == NULL || r.end == NULL)
-		return sigcont;
+		return LOOP_SIGCNT;
 	delete(r.start, r.end);
-	return sigcont;
+	return LOOP_SIGCNT;
 }
 
 static enum loopsig changelinescmd(void)
 {
 	struct linerange r = huntlinerange();
 	if (r.start == NULL || r.end == NULL)
-		return sigcont;
+		return LOOP_SIGCNT;
 	delete(r.start, r.end);
 	return checksig(insertmode(r.start));
 }
 
 static enum loopsig lineoverlaycmd(void)
 {
+	winbounds();
 	int lineno = lwe_scroll + 1;
 	int screenline = 0;
+	int fileline = 0;
 	attron(A_STANDOUT);
 	while (screenline < LINES) {
 		char nstr[32];
 		snprintf(nstr, sizeof(nstr), "%4d", lineno);
 		mvaddstr(screenline, 0, nstr);
-		screenline++;
+		char *lstart = startofline(fileline);
+		if (lstart == NULL)
+			break;
+		screenline += screenlines(lstart);
+		fileline++;
 		lineno++;
 	}
 	attroff(A_STANDOUT);
 	refresh();
 	getch();
-	return sigcont;
+	return LOOP_SIGCNT;
+}
+
+static enum loopsig yankcmd(void)
+{
+	char *start = hunt();
+	if (start == NULL)
+		return LOOP_SIGCNT;
+	char *end = hunt();
+	if (end == NULL)
+		return LOOP_SIGCNT;
+	yank(start, end);
+	return LOOP_SIGCNT;
+}
+
+static enum loopsig yanklinescmd(void)
+{
+	struct linerange r = huntlinerange();
+	if (r.start == NULL || r.end == NULL)
+		return LOOP_SIGCNT;
+	yank(r.start, r.end);
+	return LOOP_SIGCNT;
+}
+
+struct yankstr {
+	char *start;
+	char *end;
+};
+
+static struct yankstr yankhunt(void)
+{
+	clear();
+	int linestodraw = 26 < LINES ? 26 : LINES;
+	for (int i = 0; i < linestodraw; i++) {
+		attron(A_STANDOUT);
+		mvaddch(i, 0, 'a' + i);
+		attroff(A_STANDOUT);
+		int previewsz = COLS - 2;
+		char preview[previewsz];
+		snprintf(preview, previewsz, "%s", yanks[i]);
+		for (int j = 0; j < yanksizes[i] && j < previewsz; j++) {
+			char c = preview[j];
+			c = (isgraph(c) || c == ' ') ? c : '?';
+			addch(c);
+		}
+	}
+	refresh();
+	int selected = getch() - 'a';
+	if (selected < 0 || selected > 25)
+		return (struct yankstr) {NULL, NULL};
+	struct yankstr result;
+	result.start = yanks[selected];
+	result.end = result.start + yanksizes[selected];
+	return result;
+}
+
+static enum loopsig preputcmd(void)
+{
+	char *t = hunt();
+	if (t == NULL)
+		return LOOP_SIGCNT;
+	struct yankstr y = yankhunt();
+	if (y.start == NULL || y.end == NULL)
+		return LOOP_SIGCNT;
+	return checksig(bufinsertstr(y.start, y.end, t));
+}
+
+static enum loopsig putcmd(void)
+{
+	char *t = hunt();
+	if (t == NULL)
+		return LOOP_SIGCNT;
+	if (t != getbufend())
+		t++;
+	struct yankstr y = yankhunt();
+	if (y.start == NULL || y.end == NULL)
+		return LOOP_SIGCNT;
+	return checksig(bufinsertstr(y.start, y.end, t));
 }
 
 static command_fn cmdtbl[512] = {
@@ -667,7 +707,11 @@ static command_fn cmdtbl[512] = {
 	['g'] = jumptolinecmd,
 	['D'] = deletelinescmd,
 	['C'] = changelinescmd,
-	['n'] = lineoverlaycmd
+	['n'] = lineoverlaycmd,
+	['y'] = yankcmd,
+	['Y'] = yanklinescmd,
+	['p'] = putcmd,
+	['o'] = preputcmd
 };
 
 static int cmdloop(void)
@@ -679,9 +723,9 @@ static int cmdloop(void)
 		if (cmd == NULL)
 			continue;
 		enum loopsig s = cmd();
-		if (s == sigquit)
+		if (s == LOOP_SIGQUIT)
 			return 1;
-		else if (s == sigerror)
+		else if (s == LOOP_SIGERR)
 			return 0;
 	}
 	return 0;
@@ -689,7 +733,7 @@ static int cmdloop(void)
 
 static void ed(void)
 {
-	if (!bread())
+	if (!bufread(filename))
 		return;
 	lwe_scroll = 0;
 	cmdloop();
@@ -697,8 +741,9 @@ static void ed(void)
 
 int main(int argc, char **argv)
 {
+	char errbuf[256];
 	if (argc != 2) {
-		err("missing file arg");
+		seterr("missing file arg");
 		goto error;
 	} else {
 		initscr();
@@ -707,14 +752,16 @@ int main(int argc, char **argv)
 		nonl();
 		intrflush(stdscr, FALSE);
 		keypad(stdscr, TRUE);
+
 		filename = argv[1];
 		ed();
+
 		endwin();
-		if (strcmp(errbuf, ""))
-			goto error;
-		return 0;
 	}
 	error:
+	geterr(errbuf, sizeof(errbuf));
+	if (errbuf[0] == '\0')
+		return 0;
 	fprintf(stderr, "error: %s\n", errbuf);
 	return 1;
 }
