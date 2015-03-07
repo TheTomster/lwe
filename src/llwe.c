@@ -22,6 +22,19 @@ static int yanksizes[26];
 #define inbuf(p) (p >= getbufptr() && p <= getbufend())
 #define bufempty() (getbufptr() == getbufend())
 
+static char *startofline(int off)
+{
+	char *result = start;
+	while (off > 0) {
+		if (!inbuf(result))
+			return NULL;
+		if (*result == '\n')
+			off--;
+		result++;
+	}
+	return result;
+}
+
 static char *endofline(char *p)
 {
 	assert(inbuf(p));
@@ -348,21 +361,10 @@ static void movecursor(char *t){
 	if (linestart) {
 		char* iter = linestart;
 			while (iter != t) {
-				if (*iter == '\t') {
-					if (iter != linestart) {
-						const char* const prev = iter - 1;
-						if (*prev == '\t') {
-							offset += TABSIZE;
-							iter++;
-							continue;
-						}
-					}
-					int lineidx = iter - linestart;
-					offset += (TABSIZE - (lineidx % TABSIZE));
-				}
-				else {
+				if (*iter == '\t')
+					offset += (TABSIZE - (offset % TABSIZE));
+				else
 					offset++;
-				}
 				iter++;
 			}
 		move(linenumber, offset);
@@ -534,19 +536,6 @@ struct linerange {
 	char *start;
 	char *end;
 };
-
-static char *startofline(int off)
-{
-	char *result = start;
-	while (off > 0) {
-		if (!inbuf(result))
-			return NULL;
-		if (*result == '\n')
-			off--;
-		result++;
-	}
-	return result;
-}
 
 static struct linerange huntlinerange(void)
 {
