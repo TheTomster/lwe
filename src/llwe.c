@@ -24,6 +24,19 @@ static int yanksizes[26];
 #define inbuf(p) (p >= getbufptr() && p <= getbufend())
 #define bufempty() (getbufptr() == getbufend())
 
+static char *startofline(int off)
+{
+	char *result = start;
+	while (off > 0) {
+		if (!inbuf(result))
+			return NULL;
+		if (*result == '\n')
+			off--;
+		result++;
+	}
+	return result;
+}
+
 static char *endofline(char *p)
 {
 	assert(inbuf(p));
@@ -128,6 +141,21 @@ static int count(char c)
 		if (*i == c)
 			ct++;
 	return ct;
+}
+
+static int findcharcount(char *s, char *e, char c)
+{
+	int count = 0;
+	if(!s || !e){
+		return count;
+	}
+	while(s != e){
+		if(*s == c){
+			count++;
+		}
+		s++;
+	}
+	return count;
 }
 
 static void ptarg(int count)
@@ -316,6 +344,28 @@ static void ruboutword(char **t)
 	*t = dstart;
 }
 
+static void movecursor(char *t){
+	if (!t) 
+		return;
+	// Figure out line number, number of tabs on the line,
+	// along with how much space each tab is actually taking up
+	// so we can figure out the offset in order to highlight the cursor
+	int offset = 0;
+	int linenumber = findcharcount(start, t, '\n');
+	char* linestart = startofline(linenumber);
+	if (linestart) {
+		char* iter = linestart;
+			while (iter != t) {
+				if (*iter == '\t')
+					offset += (TABSIZE - (offset % TABSIZE));
+				else
+					offset++;
+				iter++;
+			}
+		move(linenumber, offset);
+	}
+}
+
 static int insertmode(char *t)
 {
 	mode = "INSERT";
@@ -324,6 +374,7 @@ static int insertmode(char *t)
 		draw();
 		if (t > end)
 			doscrl(LINES / 2);
+		movecursor(t);
 		c = getch();
 		if (c == '\r')
 			c = '\n';
@@ -500,19 +551,6 @@ struct linerange {
 	char *start;
 	char *end;
 };
-
-static char *startofline(int off)
-{
-	char *result = start;
-	while (off > 0) {
-		if (!inbuf(result))
-			return NULL;
-		if (*result == '\n')
-			off--;
-		result++;
-	}
-	return result;
-}
 
 static struct linerange huntlinerange(void)
 {
