@@ -14,7 +14,7 @@
 #define C_U 21
 #define C_W 23
 
-static char *filename, *start, *end;
+static char *filename, *start, *end, *mode;
 static int lwe_scroll;
 static char *yanks[26];
 static int yanksizes[26];
@@ -53,7 +53,7 @@ static void winbounds(void)
 {
 	int r = 0, c = 0;
 	start = skipscreenlines(getbufptr(), lwe_scroll);
-	for (end = start; end != getbufend() && r < LINES; end++) {
+	for (end = start; end != getbufend() && r < LINES - 1; end++) {
 		c++;
 		if (*end == '\n')
 			c = 0;
@@ -74,6 +74,14 @@ static void pc(char c)
 	addch(c);
 }
 
+static void drawmodeline(void)
+{
+	int r = LINES - 1;
+	char buf[8192];
+	snprintf(buf, sizeof(buf), "%-32s\t%-24s", filename, mode);
+	mvaddstr(r, 0, buf);
+}
+
 static void draw(void)
 {
 	char *i;
@@ -82,6 +90,7 @@ static void draw(void)
 	winbounds();
 	for (i = start; i < end; i++)
 		pc(*i);
+	drawmodeline();
 	refresh();
 }
 
@@ -703,6 +712,7 @@ int main(int argc, char **argv)
 		nonl();
 		intrflush(stdscr, FALSE);
 		keypad(stdscr, TRUE);
+		start_color();
 
 		filename = argv[1];
 		ed();
