@@ -61,7 +61,7 @@ static void winbounds(void)
 		if (c == 0)
 			r++;
 	}
-	if (end > start) end--;
+	if (end > start && *end == '\n') end--;
 	assert(inbuf(start) && inbuf(end));
 }
 
