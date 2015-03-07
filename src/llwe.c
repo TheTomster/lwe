@@ -14,6 +14,8 @@
 #define C_U 21
 #define C_W 23
 
+#define LLWE_CYAN 1
+
 static char *filename, *start, *end, *mode;
 static int lwe_scroll;
 static char *yanks[26];
@@ -78,8 +80,10 @@ static void drawmodeline(void)
 {
 	int r = LINES - 1;
 	char buf[8192];
-	snprintf(buf, sizeof(buf), "%-32s\t%-24s", filename, mode);
+	snprintf(buf, sizeof(buf), "[F: %-32s][%-24s][%8d]", filename, mode, lwe_scroll);
+	attron(COLOR_PAIR(LLWE_CYAN));
 	mvaddstr(r, 0, buf);
+	attroff(COLOR_PAIR(LLWE_CYAN));
 }
 
 static void draw(void)
@@ -99,25 +103,6 @@ static void doscrl(int d)
 	lwe_scroll += d;
 	if (lwe_scroll < 0)
 		lwe_scroll = 0;
-}
-
-static void jumptoline(void)
-{
-	char buf[32], c;
-	int i;
-	memset(buf, '\0', 32);
-	for (i = 0; i < 32; i++) {
-		c = getch();
-		if (isdigit(c))
-			buf[i] = c;
-		else
-			break;
-	}
-	i = atoi(buf);
-	if (i == 0)
-		return;
-	lwe_scroll = i;
-	doscrl(-LINES / 2);
 }
 
 static char *find(char c, int n)
@@ -187,6 +172,7 @@ static void drawdisamb(char c, int lvl, int toskip)
 			continue;
 		toskip = (toskip > 0) ? (toskip - 1) : skips(lvl);
 	}
+	drawmodeline();
 	refresh();
 }
 
@@ -242,7 +228,7 @@ static void drawlinelbls(int lvl, int off)
 	int count = 0;
 	char *p = start;
 	int toskip = off;
-	for (int line = 0; line < LINES;) {
+	for (int line = 0; line < LINES - 1;) {
 		if (toskip == 0) {
 			move(line, 0);
 			ptarg(count++);
@@ -332,6 +318,7 @@ static void ruboutword(char **t)
 
 static int insertmode(char *t)
 {
+	mode = "INSERT";
 	int c;
 	for (;;) {
 		draw();
@@ -399,6 +386,7 @@ static enum loopsig quitcmd(void)
 
 static enum loopsig insertcmd(void)
 {
+	mode = "TARGET (INSERT)";
 	char *start = hunt();
 	if (start == NULL)
 		return false;
@@ -407,6 +395,7 @@ static enum loopsig insertcmd(void)
 
 static enum loopsig appendcmd(void)
 {
+	mode = "TARGET (APPEND)";
 	char *start = hunt();
 	if (start == NULL)
 		return false;
@@ -443,6 +432,7 @@ static void orient(char **start, char **end)
 
 static enum loopsig deletecmd(void)
 {
+	mode = "TARGET (DELETE)";
 	char *start = hunt();
 	if (start == NULL)
 		return LOOP_SIGCNT;
@@ -456,6 +446,7 @@ static enum loopsig deletecmd(void)
 
 static enum loopsig changecmd(void)
 {
+	mode = "TARGET (CHANGE)";
 	char *start = hunt();
 	if (start == NULL)
 		return LOOP_SIGCNT;
@@ -477,7 +468,22 @@ static enum loopsig reloadcmd(void)
 
 static enum loopsig jumptolinecmd(void)
 {
-	jumptoline();
+	mode = "JUMP";
+	draw();
+	char buf[32];
+	memset(buf, '\0', 32);
+	for (int i = 0; i < 32; i++) {
+		char c = getch();
+		if (isdigit(c))
+			buf[i] = c;
+		else
+			break;
+	}
+	int i = atoi(buf);
+	if (i == 0)
+		return LOOP_SIGCNT;
+	lwe_scroll = i;
+	doscrl(-LINES / 2);
 	return LOOP_SIGCNT;
 }
 
@@ -531,6 +537,7 @@ retnull:
 
 static enum loopsig deletelinescmd(void)
 {
+	mode = "TARGET LINES (DELETE)";
 	struct linerange r = huntlinerange();
 	if (r.start == NULL || r.end == NULL)
 		return LOOP_SIGCNT;
@@ -540,6 +547,7 @@ static enum loopsig deletelinescmd(void)
 
 static enum loopsig changelinescmd(void)
 {
+	mode = "TARGET LINES (CHANGE)";
 	struct linerange r = huntlinerange();
 	if (r.start == NULL || r.end == NULL)
 		return LOOP_SIGCNT;
@@ -573,6 +581,7 @@ static enum loopsig lineoverlaycmd(void)
 
 static enum loopsig yankcmd(void)
 {
+	mode = "TARGET (YANK)";
 	char *start = hunt();
 	if (start == NULL)
 		return LOOP_SIGCNT;
@@ -585,6 +594,7 @@ static enum loopsig yankcmd(void)
 
 static enum loopsig yanklinescmd(void)
 {
+	mode = "TARGET LINES (YANK)";
 	struct linerange r = huntlinerange();
 	if (r.start == NULL || r.end == NULL)
 		return LOOP_SIGCNT;
@@ -626,6 +636,7 @@ static struct yankstr yankhunt(void)
 
 static enum loopsig preputcmd(void)
 {
+	mode = "TARGET (PRE-PUT)";
 	char *t = hunt();
 	if (t == NULL)
 		return LOOP_SIGCNT;
@@ -637,6 +648,7 @@ static enum loopsig preputcmd(void)
 
 static enum loopsig putcmd(void)
 {
+	mode = "TARGET (PUT)";
 	char *t = hunt();
 	if (t == NULL)
 		return LOOP_SIGCNT;
@@ -677,6 +689,7 @@ static command_fn cmdtbl[512] = {
 static int cmdloop(void)
 {
 	for (;;) {
+		mode = "COMMAND";
 		draw();
 		int c = getch();
 		command_fn cmd = cmdtbl[c];
@@ -713,6 +726,7 @@ int main(int argc, char **argv)
 		intrflush(stdscr, FALSE);
 		keypad(stdscr, TRUE);
 		start_color();
+		init_pair(LLWE_CYAN, COLOR_CYAN, COLOR_BLACK);
 
 		filename = argv[1];
 		ed();
