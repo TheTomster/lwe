@@ -16,15 +16,15 @@
 
 #define LLWE_CYAN 1
 
-static char *filename, *start, *end, *mode;
-static int lwe_scroll;
-static char *yanks[26];
-static int yanksizes[26];
+char *filename, *start, *end, *mode;
+int lwe_scroll;
+char *yanks[26];
+int yanksizes[26];
 
 #define inbuf(p) (p >= getbufptr() && p <= getbufend())
 #define bufempty() (getbufptr() == getbufend())
 
-static char *startofline(int off)
+char *startofline(int off)
 {
 	char *result = start;
 	while (off > 0) {
@@ -37,14 +37,14 @@ static char *startofline(int off)
 	return result;
 }
 
-static char *endofline(char *p)
+char *endofline(char *p)
 {
 	assert(inbuf(p));
 	for (; p != getbufend() && *p != '\n'; p++);
 	return p;
 }
 
-static int screenlines(char *start)
+int screenlines(char *start)
 {
 	char *end = endofline(start);
 	if (start == NULL || end == NULL)
@@ -53,7 +53,7 @@ static int screenlines(char *start)
 	return (len / COLS) + 1;
 }
 
-static char *skipscreenlines(char *start, int lines)
+char *skipscreenlines(char *start, int lines)
 {
 	assert(inbuf(start));
 	while (lines > 0 && start < getbufend()) {
@@ -64,7 +64,7 @@ static char *skipscreenlines(char *start, int lines)
 	return start;
 }
 
-static void winbounds(void)
+void winbounds(void)
 {
 	int r = 0, c = 0;
 	start = skipscreenlines(getbufptr(), lwe_scroll);
@@ -80,7 +80,7 @@ static void winbounds(void)
 	assert(inbuf(start) && inbuf(end));
 }
 
-static void pc(char c)
+void pc(char c)
 {
 	if (c == '\r')
 		c = '?';
@@ -89,7 +89,7 @@ static void pc(char c)
 	addch(c);
 }
 
-static void drawmodeline(void)
+void drawmodeline(void)
 {
 	int r = LINES - 1;
 	char buf[8192];
@@ -99,7 +99,7 @@ static void drawmodeline(void)
 	attroff(COLOR_PAIR(LLWE_CYAN));
 }
 
-static void draw(void)
+void draw(void)
 {
 	char *i;
 	erase();
@@ -111,14 +111,14 @@ static void draw(void)
 	refresh();
 }
 
-static void doscrl(int d)
+void doscrl(int d)
 {
 	lwe_scroll += d;
 	if (lwe_scroll < 0)
 		lwe_scroll = 0;
 }
 
-static char *find(char c, int n)
+char *find(char c, int n)
 {
 	char *i;
 	for (i = start; i < end; i++) {
@@ -132,7 +132,7 @@ static char *find(char c, int n)
 	return 0;
 }
 
-static int count(char c)
+int count(char c)
 {
 	int ct;
 	char *i;
@@ -143,7 +143,7 @@ static int count(char c)
 	return ct;
 }
 
-static int findcharcount(char *s, char *e, char c)
+int findcharcount(char *s, char *e, char c)
 {
 	int count = 0;
 	if(!s || !e){
@@ -158,7 +158,7 @@ static int findcharcount(char *s, char *e, char c)
 	return count;
 }
 
-static void ptarg(int count)
+void ptarg(int count)
 {
 	char a;
 	a = 'a' + (count % 26);
@@ -167,7 +167,7 @@ static void ptarg(int count)
 	attroff(A_STANDOUT);
 }
 
-static int skips(int lvl)
+int skips(int lvl)
 {
 	if (lvl == 0)
 		return 0;
@@ -179,7 +179,7 @@ static int skips(int lvl)
 	return i - 1;
 }
 
-static void drawdisambchar(char c, int toskip, char *i, int *tcount)
+void drawdisambchar(char c, int toskip, char *i, int *tcount)
 {
 	if (*i == c && toskip <= 0) {
 		ptarg(*tcount);
@@ -189,7 +189,7 @@ static void drawdisambchar(char c, int toskip, char *i, int *tcount)
 	}
 }
 
-static void drawdisamb(char c, int lvl, int toskip)
+void drawdisamb(char c, int lvl, int toskip)
 {
 	erase();
 	move(0, 0);
@@ -204,7 +204,7 @@ static void drawdisamb(char c, int lvl, int toskip)
 	refresh();
 }
 
-static bool onlymatch(char c, int lvl, int toskip)
+bool onlymatch(char c, int lvl, int toskip)
 {
 	// If the initial skip + this level's skip in between matches is
 	// greater than the count of matching characters in the window,
@@ -213,7 +213,7 @@ static bool onlymatch(char c, int lvl, int toskip)
 	return skips(lvl) + toskip + 1 >= count(c);
 }
 
-static char *disamb(char c)
+char *disamb(char c)
 {
 	int lvl = 0;
 	int toskip = 0;
@@ -229,7 +229,7 @@ static char *disamb(char c)
 	return find(c, toskip);
 }
 
-static char *hunt(void)
+char *hunt(void)
 {
 	char c;
 	if (bufempty())
@@ -239,7 +239,7 @@ static char *hunt(void)
 	return disamb(c);
 }
 
-static void nextline(char **p)
+void nextline(char **p)
 {
 	assert(inbuf(*p));
 	for (;*p < getbufend(); (*p)++)
@@ -250,7 +250,7 @@ static void nextline(char **p)
 	assert(inbuf(*p));
 }
 
-static void drawlinelbls(int lvl, int off)
+void drawlinelbls(int lvl, int off)
 {
 	draw();
 	int count = 0;
@@ -270,12 +270,12 @@ static void drawlinelbls(int lvl, int off)
 	refresh();
 }
 
-static bool lineselected(int lvl, int off)
+bool lineselected(int lvl, int off)
 {
 	return off + skips(lvl) > LINES;
 }
 
-static int getoffset(int lvl, int off)
+int getoffset(int lvl, int off)
 {
 	char c = getch();
 	int i = c - 'a';
@@ -285,7 +285,7 @@ static int getoffset(int lvl, int off)
 	return off + delta;
 }
 
-static int linehunt(void)
+int linehunt(void)
 {
 	int lvl = 0;
 	int off = 0;
@@ -301,7 +301,7 @@ static int linehunt(void)
 	return off;
 }
 
-static void shiftring(void)
+void shiftring(void)
 {
 	if (yanks[25] != NULL)
 		free(yanks[25]);
@@ -309,7 +309,7 @@ static void shiftring(void)
 	memmove(&yanksizes[1], &yanksizes[0], sizeof(yanksizes[0]) * 25);
 }
 
-static void yank(char *start, char *end)
+void yank(char *start, char *end)
 {
 	shiftring();
 	int sz = end - start;
@@ -319,7 +319,7 @@ static void yank(char *start, char *end)
 	memcpy(yanks[0], start, sz);
 }
 
-static void delete(char *start, char *end)
+void delete(char *start, char *end)
 {
 	if (end != getbufend())
 		end++;
@@ -327,7 +327,7 @@ static void delete(char *start, char *end)
 	bufdelete(start, end);
 }
 
-static void ruboutword(char **t)
+void ruboutword(char **t)
 {
 	// Don't delete letter that our cursor is on otherwise we would
 	// remove the letter after our last entered character in insert mode
@@ -344,7 +344,7 @@ static void ruboutword(char **t)
 	*t = dstart;
 }
 
-static void movecursor(char *t){
+void movecursor(char *t){
 	if (!t) 
 		return;
 	// Figure out line number, number of tabs on the line,
@@ -366,7 +366,7 @@ static void movecursor(char *t){
 	}
 }
 
-static int insertmode(char *t)
+int insertmode(char *t)
 {
 	mode = "INSERT";
 	int c;
@@ -411,31 +411,31 @@ enum loopsig {
 	LOOP_SIGERR
 };
 
-static enum loopsig checksig(bool ok)
+enum loopsig checksig(bool ok)
 {
 	return ok ? LOOP_SIGCNT : LOOP_SIGERR;
 }
 
 typedef enum loopsig (*command_fn) (void);
 
-static enum loopsig scrolldown(void)
+enum loopsig scrolldown(void)
 {
 	doscrl(LINES / 2);
 	return LOOP_SIGCNT;
 }
 
-static enum loopsig scrollup(void)
+enum loopsig scrollup(void)
 {
 	doscrl(-LINES / 2);
 	return LOOP_SIGCNT;
 }
 
-static enum loopsig quitcmd(void)
+enum loopsig quitcmd(void)
 {
 	return LOOP_SIGQUIT;
 }
 
-static enum loopsig insertcmd(void)
+enum loopsig insertcmd(void)
 {
 	mode = "TARGET (INSERT)";
 	char *start = hunt();
@@ -444,7 +444,7 @@ static enum loopsig insertcmd(void)
 	return checksig(insertmode(start));
 }
 
-static enum loopsig appendcmd(void)
+enum loopsig appendcmd(void)
 {
 	mode = "TARGET (APPEND)";
 	char *start = hunt();
@@ -455,7 +455,7 @@ static enum loopsig appendcmd(void)
 	return checksig(insertmode(start));
 }
 
-static enum loopsig writecmd(void)
+enum loopsig writecmd(void)
 {
 	if (!bufwrite(filename)) {
 		const char msg1[] = "Error: Failed to write to: ";
@@ -472,7 +472,7 @@ static enum loopsig writecmd(void)
 	return LOOP_SIGCNT;
 }
 
-static void orient(char **start, char **end)
+void orient(char **start, char **end)
 {
 	if (*end < *start) {
 		char *tmp = *end;
@@ -481,7 +481,7 @@ static void orient(char **start, char **end)
 	}
 }
 
-static enum loopsig deletecmd(void)
+enum loopsig deletecmd(void)
 {
 	mode = "TARGET (DELETE)";
 	char *start = hunt();
@@ -495,7 +495,7 @@ static enum loopsig deletecmd(void)
 	return LOOP_SIGCNT;
 }
 
-static enum loopsig changecmd(void)
+enum loopsig changecmd(void)
 {
 	mode = "TARGET (CHANGE)";
 	char *start = hunt();
@@ -509,7 +509,7 @@ static enum loopsig changecmd(void)
 	return checksig(insertmode(start));
 }
 
-static enum loopsig reloadcmd(void)
+enum loopsig reloadcmd(void)
 {
 	bool ok = bufread(filename);
 	if (!ok)
@@ -517,7 +517,7 @@ static enum loopsig reloadcmd(void)
 	return LOOP_SIGCNT;
 }
 
-static enum loopsig jumptolinecmd(void)
+enum loopsig jumptolinecmd(void)
 {
 	mode = "JUMP";
 	draw();
@@ -538,7 +538,7 @@ static enum loopsig jumptolinecmd(void)
 	return LOOP_SIGCNT;
 }
 
-static void orienti(int *a, int *b)
+void orienti(int *a, int *b)
 {
 	if (*b < *a) {
 		int tmp = *a;
@@ -552,7 +552,7 @@ struct linerange {
 	char *end;
 };
 
-static struct linerange huntlinerange(void)
+struct linerange huntlinerange(void)
 {
 	int startoffset = linehunt();
 	if (startoffset == -1)
@@ -573,7 +573,7 @@ retnull:
 	return (struct linerange) {.start = NULL, .end = NULL};
 }
 
-static enum loopsig deletelinescmd(void)
+enum loopsig deletelinescmd(void)
 {
 	mode = "TARGET LINES (DELETE)";
 	struct linerange r = huntlinerange();
@@ -583,7 +583,7 @@ static enum loopsig deletelinescmd(void)
 	return LOOP_SIGCNT;
 }
 
-static enum loopsig changelinescmd(void)
+enum loopsig changelinescmd(void)
 {
 	mode = "TARGET LINES (CHANGE)";
 	struct linerange r = huntlinerange();
@@ -593,7 +593,7 @@ static enum loopsig changelinescmd(void)
 	return checksig(insertmode(r.start));
 }
 
-static enum loopsig lineoverlaycmd(void)
+enum loopsig lineoverlaycmd(void)
 {
 	winbounds();
 	int lineno = lwe_scroll + 1;
@@ -617,7 +617,7 @@ static enum loopsig lineoverlaycmd(void)
 	return LOOP_SIGCNT;
 }
 
-static enum loopsig yankcmd(void)
+enum loopsig yankcmd(void)
 {
 	mode = "TARGET (YANK)";
 	char *start = hunt();
@@ -630,7 +630,7 @@ static enum loopsig yankcmd(void)
 	return LOOP_SIGCNT;
 }
 
-static enum loopsig yanklinescmd(void)
+enum loopsig yanklinescmd(void)
 {
 	mode = "TARGET LINES (YANK)";
 	struct linerange r = huntlinerange();
@@ -645,7 +645,7 @@ struct yankstr {
 	char *end;
 };
 
-static struct yankstr yankhunt(void)
+struct yankstr yankhunt(void)
 {
 	clear();
 	int linestodraw = 26 < LINES ? 26 : LINES;
@@ -672,7 +672,7 @@ static struct yankstr yankhunt(void)
 	return result;
 }
 
-static enum loopsig preputcmd(void)
+enum loopsig preputcmd(void)
 {
 	mode = "TARGET (PRE-PUT)";
 	char *t = hunt();
@@ -684,7 +684,7 @@ static enum loopsig preputcmd(void)
 	return checksig(bufinsertstr(y.start, y.end, t));
 }
 
-static enum loopsig putcmd(void)
+enum loopsig putcmd(void)
 {
 	mode = "TARGET (PUT)";
 	char *t = hunt();
@@ -698,7 +698,7 @@ static enum loopsig putcmd(void)
 	return checksig(bufinsertstr(y.start, y.end, t));
 }
 
-static command_fn cmdtbl[512] = {
+command_fn cmdtbl[512] = {
 	[C_D] = scrolldown,
 	[KEY_DOWN] = scrolldown,
 	[KEY_NPAGE] = scrolldown,
@@ -724,7 +724,7 @@ static command_fn cmdtbl[512] = {
 	['o'] = preputcmd
 };
 
-static int cmdloop(void)
+int cmdloop(void)
 {
 	for (;;) {
 		mode = "COMMAND";
@@ -742,7 +742,7 @@ static int cmdloop(void)
 	return 0;
 }
 
-static void initcurses()
+void initcurses()
 {
 	initscr();
 	cbreak();
