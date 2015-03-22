@@ -742,12 +742,16 @@ static int cmdloop(void)
 	return 0;
 }
 
-static void ed(void)
+static void initcurses()
 {
-	if (!bufread(filename))
-		return;
-	lwe_scroll = 0;
-	cmdloop();
+	initscr();
+	cbreak();
+	noecho();
+	nonl();
+	intrflush(stdscr, FALSE);
+	keypad(stdscr, TRUE);
+	start_color();
+	init_pair(LLWE_CYAN, COLOR_CYAN, COLOR_BLACK);
 }
 
 int main(int argc, char **argv)
@@ -757,18 +761,12 @@ int main(int argc, char **argv)
 		seterr("missing file arg");
 		goto error;
 	} else {
-		initscr();
-		cbreak();
-		noecho();
-		nonl();
-		intrflush(stdscr, FALSE);
-		keypad(stdscr, TRUE);
-		start_color();
-		init_pair(LLWE_CYAN, COLOR_CYAN, COLOR_BLACK);
-
+		initcurses();
 		filename = argv[1];
-		ed();
-
+		if (bufread(filename)) {
+			lwe_scroll = 0;
+			cmdloop();
+		}
 		endwin();
 	}
 	error:
