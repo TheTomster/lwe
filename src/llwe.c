@@ -9,6 +9,7 @@
 
 #include "buffer.h"
 #include "err.h"
+#include "draw.h"
 
 #define C_D 4
 #define C_U 21
@@ -17,7 +18,6 @@
 #define LLWE_CYAN 1
 
 char *filename, *start, *end, *mode;
-int lwe_scroll;
 char *yanks[26];
 int yanksizes[26];
 
@@ -67,7 +67,7 @@ char *skipscreenlines(char *start, int lines)
 void winbounds(void)
 {
 	int r = 0, c = 0;
-	start = skipscreenlines(getbufptr(), lwe_scroll);
+	start = skipscreenlines(getbufptr(), scroll_line());
 	for (end = start; end != getbufend() && r < LINES - 1; end++) {
 		c++;
 		if (*end == '\n')
@@ -93,13 +93,14 @@ void drawmodeline(void)
 {
 	int r = LINES - 1;
 	char buf[8192];
-	snprintf(buf, sizeof(buf), "[F: %-32.32s][M: %-24s][L: %8d]", filename, mode, lwe_scroll);
+	snprintf(buf, sizeof(buf), "[F: %-32.32s][M: %-24s][L: %8d]",
+			filename, mode, scroll_line());
 	attron(COLOR_PAIR(LLWE_CYAN));
 	mvaddstr(r, 0, buf);
 	attroff(COLOR_PAIR(LLWE_CYAN));
 }
 
-void draw(void)
+void old_draw(void)
 {
 	char *i;
 	erase();
@@ -113,9 +114,7 @@ void draw(void)
 
 void doscrl(int d)
 {
-	lwe_scroll += d;
-	if (lwe_scroll < 0)
-		lwe_scroll = 0;
+	set_scroll(scroll_line() + d);
 }
 
 char *find(char c, int n)
@@ -234,7 +233,7 @@ char *hunt(void)
 	char c;
 	if (bufempty())
 		return getbufptr();
-	draw();
+	old_draw();
 	c = getch();
 	return disamb(c);
 }
@@ -252,7 +251,7 @@ void nextline(char **p)
 
 void drawlinelbls(int lvl, int off)
 {
-	draw();
+	old_draw();
 	int count = 0;
 	char *p = start;
 	int toskip = off;
@@ -371,7 +370,7 @@ int insertmode(char *t)
 	mode = "INSERT";
 	int c;
 	for (;;) {
-		draw();
+		old_draw();
 		if (t > end)
 			doscrl(LINES / 2);
 		movecursor(t);
@@ -520,7 +519,7 @@ enum loopsig reloadcmd(void)
 enum loopsig jumptolinecmd(void)
 {
 	mode = "JUMP";
-	draw();
+	old_draw();
 	char buf[32];
 	memset(buf, '\0', 32);
 	for (int i = 0; i < 32; i++) {
@@ -533,7 +532,7 @@ enum loopsig jumptolinecmd(void)
 	int i = atoi(buf);
 	if (i == 0)
 		return LOOP_SIGCNT;
-	lwe_scroll = i;
+	set_scroll(i);
 	doscrl(-LINES / 2);
 	return LOOP_SIGCNT;
 }
@@ -596,7 +595,7 @@ enum loopsig changelinescmd(void)
 enum loopsig lineoverlaycmd(void)
 {
 	winbounds();
-	int lineno = lwe_scroll + 1;
+	int lineno = scroll_line() + 1;
 	int screenline = 0;
 	int fileline = 0;
 	attron(A_STANDOUT);
@@ -728,7 +727,7 @@ int cmdloop(void)
 {
 	for (;;) {
 		mode = "COMMAND";
-		draw();
+		old_draw();
 		int c = getch();
 		command_fn cmd = cmdtbl[c];
 		if (cmd == NULL)
@@ -763,10 +762,8 @@ int main(int argc, char **argv)
 	} else {
 		initcurses();
 		filename = argv[1];
-		if (bufread(filename)) {
-			lwe_scroll = 0;
+		if (bufread(filename))
 			cmdloop();
-		}
 		endwin();
 	}
 	error:
