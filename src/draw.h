@@ -11,3 +11,5 @@ int winrows(void);
 int wincols(void);
 
 void draw(char *start, char *end);
+
+int screenlines(char *start);

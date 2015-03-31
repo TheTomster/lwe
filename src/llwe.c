@@ -17,16 +17,15 @@
 
 #define LLWE_CYAN 1
 
-char *filename, *start, *end, *mode;
+char *filename, *mode;
 char *yanks[26];
 int yanksizes[26];
 
-#define inbuf(p) (p >= getbufptr() && p <= getbufend())
 #define bufempty() (getbufptr() == getbufend())
 
 char *startofline(int off)
 {
-	char *result = start;
+	char *result = winstart();
 	while (off > 0) {
 		if (!inbuf(result))
 			return NULL;
@@ -42,42 +41,6 @@ char *endofline(char *p)
 	assert(inbuf(p));
 	for (; p != getbufend() && *p != '\n'; p++);
 	return p;
-}
-
-int screenlines(char *start)
-{
-	char *end = endofline(start);
-	if (start == NULL || end == NULL)
-		return 1;
-	int len = end - start;
-	return (len / COLS) + 1;
-}
-
-char *skipscreenlines(char *start, int lines)
-{
-	assert(inbuf(start));
-	while (lines > 0 && start < getbufend()) {
-		lines -= screenlines(start);
-		start = endofline(start) + 1;
-	}
-	start = start > getbufend() ? getbufend() : start;
-	return start;
-}
-
-void winbounds(void)
-{
-	int r = 0, c = 0;
-	start = skipscreenlines(getbufptr(), scroll_line());
-	for (end = start; end != getbufend() && r < LINES - 1; end++) {
-		c++;
-		if (*end == '\n')
-			c = 0;
-		c %= COLS;
-		if (c == 0)
-			r++;
-	}
-	if (end > start && *end == '\n') end--;
-	assert(inbuf(start) && inbuf(end));
 }
 
 void pc(char c)
@@ -105,8 +68,7 @@ void old_draw(void)
 	char *i;
 	erase();
 	move(0, 0);
-	winbounds();
-	for (i = start; i < end; i++)
+	for (i = winstart(); i < winend(); i++)
 		pc(*i);
 	drawmodeline();
 	refresh();
@@ -120,7 +82,7 @@ void doscrl(int d)
 char *find(char c, int n)
 {
 	char *i;
-	for (i = start; i < end; i++) {
+	for (i = winstart(); i < winend(); i++) {
 		if (*i == c) {
 			if (n <= 0)
 				return i;
@@ -136,7 +98,7 @@ int count(char c)
 	int ct;
 	char *i;
 	ct = 0;
-	for (i = start; i != end; i++)
+	for (i = winstart(); i != winend(); i++)
 		if (*i == c)
 			ct++;
 	return ct;
@@ -193,7 +155,7 @@ void drawdisamb(char c, int lvl, int toskip)
 	erase();
 	move(0, 0);
 	int tcount = 0;
-	for (char *i = start; i < end; i++) {
+	for (char *i = winstart(); i < winend(); i++) {
 		drawdisambchar(c, toskip, i, &tcount);
 		if (*i != c)
 			continue;
@@ -253,7 +215,7 @@ void drawlinelbls(int lvl, int off)
 {
 	old_draw();
 	int count = 0;
-	char *p = start;
+	char *p = winstart();
 	int toskip = off;
 	for (int line = 0; line < LINES - 1;) {
 		if (toskip == 0) {
@@ -350,7 +312,7 @@ void movecursor(char *t){
 	// along with how much space each tab is actually taking up
 	// so we can figure out the offset in order to highlight the cursor
 	int offset = 0;
-	int linenumber = findcharcount(start, t, '\n');
+	int linenumber = findcharcount(winstart(), t, '\n');
 	char* linestart = startofline(linenumber);
 	if (linestart) {
 		char* iter = linestart;
@@ -371,7 +333,7 @@ int insertmode(char *t)
 	int c;
 	for (;;) {
 		old_draw();
-		if (t > end)
+		if (t > winend())
 			doscrl(LINES / 2);
 		movecursor(t);
 		c = getch();
@@ -594,7 +556,6 @@ enum loopsig changelinescmd(void)
 
 enum loopsig lineoverlaycmd(void)
 {
-	winbounds();
 	int lineno = scroll_line() + 1;
 	int screenline = 0;
 	int fileline = 0;

@@ -8,9 +8,8 @@
 #include <string.h>
 #include <sys/stat.h>
 
+#include "buffer.h"
 #include "err.h"
-
-#define inbuf(p) (p >= buffer && p <= buffer + contentsz)
 
 static char *buffer;
 static int allocatedsz, contentsz;
