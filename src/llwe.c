@@ -24,37 +24,6 @@ int yanksizes[26];
 #define bufempty() (getbufptr() == getbufend())
 #define screenline(n) (skipscreenlines(winstart(), n))
 
-void pc(char c)
-{
-	if (c == '\r')
-		c = '?';
-	if (!isgraph(c) && !isspace(c))
-		c = '?';
-	addch(c);
-}
-
-void drawmodeline(void)
-{
-	int r = LINES - 1;
-	char buf[8192];
-	snprintf(buf, sizeof(buf), "[F: %-32.32s][M: %-24s][L: %8d]",
-			filename, mode, scroll_line());
-	attron(COLOR_PAIR(LLWE_CYAN));
-	mvaddstr(r, 0, buf);
-	attroff(COLOR_PAIR(LLWE_CYAN));
-}
-
-void old_draw(void)
-{
-	char *i;
-	erase();
-	move(0, 0);
-	for (i = winstart(); i < winend(); i++)
-		pc(*i);
-	drawmodeline();
-	refresh();
-}
-
 void doscrl(int d)
 {
 	set_scroll(scroll_line() + d);
@@ -142,7 +111,7 @@ void drawdisamb(char c, int lvl, int toskip)
 			continue;
 		toskip = (toskip > 0) ? (toskip - 1) : skips(lvl);
 	}
-	drawmodeline();
+	drawmodeline(filename, mode);
 	refresh();
 }
 
@@ -176,7 +145,7 @@ char *hunt(void)
 	char c;
 	if (bufempty())
 		return getbufptr();
-	old_draw();
+	old_draw(filename, mode);
 	c = getch();
 	return disamb(c);
 }
@@ -194,7 +163,7 @@ void nextline(char **p)
 
 void drawlinelbls(int lvl, int off)
 {
-	old_draw();
+	old_draw(filename, mode);
 	int count = 0;
 	char *p = winstart();
 	int toskip = off;
@@ -313,7 +282,7 @@ int insertmode(char *t)
 	mode = "INSERT";
 	int c;
 	for (;;) {
-		old_draw();
+		old_draw(filename, mode);
 		if (t > winend())
 			doscrl(LINES / 2);
 		movecursor(t);
@@ -462,7 +431,7 @@ enum loopsig reloadcmd(void)
 enum loopsig jumptolinecmd(void)
 {
 	mode = "JUMP";
-	old_draw();
+	old_draw(filename, mode);
 	char buf[32];
 	memset(buf, '\0', 32);
 	for (int i = 0; i < 32; i++) {
@@ -669,7 +638,7 @@ int cmdloop(void)
 {
 	for (;;) {
 		mode = "COMMAND";
-		old_draw();
+		old_draw(filename, mode);
 		int c = getch();
 		command_fn cmd = cmdtbl[c];
 		if (cmd == NULL)

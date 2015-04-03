@@ -14,3 +14,9 @@ void draw(char *start, char *end);
 
 int screenlines(char *start);
 char *skipscreenlines(char *start, int lines);
+
+void pc(char c); // TODO hide this
+void drawmodeline(char *filename, char *mode); // TODO hide this
+void old_draw(char *filename, char *mode);
+
+#define LLWE_CYAN 1 // TODO hide

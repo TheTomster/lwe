@@ -1,6 +1,7 @@
 /* (C) 2015 Tom Wright. */
 
 #include <assert.h>
+#include <ctype.h>
 #include <curses.h>
 #include <stdbool.h>
 
@@ -84,4 +85,35 @@ int screenlines(char *start)
 		return 1;
 	int len = end - start;
 	return (len / COLS) + 1;
+}
+
+void pc(char c)
+{
+	if (c == '\r')
+		c = '?';
+	if (!isgraph(c) && !isspace(c))
+		c = '?';
+	addch(c);
+}
+
+void drawmodeline(char *filename, char *mode)
+{
+	int r = LINES - 1;
+	char buf[8192];
+	snprintf(buf, sizeof(buf), "[F: %-32.32s][M: %-24s][L: %8d]",
+			filename, mode, scroll_line());
+	attron(COLOR_PAIR(LLWE_CYAN));
+	mvaddstr(r, 0, buf);
+	attroff(COLOR_PAIR(LLWE_CYAN));
+}
+
+void old_draw(char *filename, char *mode)
+{
+	char *i;
+	erase();
+	move(0, 0);
+	for (i = winstart(); i < winend(); i++)
+		pc(*i);
+	drawmodeline(filename, mode);
+	refresh();
 }
