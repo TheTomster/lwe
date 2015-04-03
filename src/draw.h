@@ -13,3 +13,4 @@ int wincols(void);
 void draw(char *start, char *end);
 
 int screenlines(char *start);
+char *skipscreenlines(char *start, int lines);

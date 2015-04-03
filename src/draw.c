@@ -46,8 +46,6 @@ char *winend()
 	return bounds.end;
 }
 
-static char *skipscreenlines(char *start, int lines);
-
 static void refresh_bounds()
 {
 	if (dirty == CLEAN) return;
@@ -68,9 +66,7 @@ static void refresh_bounds()
 	dirty = CLEAN;
 }
 
-static char *endofline(char *p);
-
-static char *skipscreenlines(char *start, int lines)
+char *skipscreenlines(char *start, int lines)
 {
 	assert(inbuf(start));
 	while (lines > 0 && start < getbufend()) {
@@ -88,11 +84,4 @@ int screenlines(char *start)
 		return 1;
 	int len = end - start;
 	return (len / COLS) + 1;
-}
-
-static char *endofline(char *p)
-{
-	assert(inbuf(p));
-	for (; p != getbufend() && *p != '\n'; p++);
-	return p;
 }

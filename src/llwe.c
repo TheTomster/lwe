@@ -22,26 +22,7 @@ char *yanks[26];
 int yanksizes[26];
 
 #define bufempty() (getbufptr() == getbufend())
-
-char *startofline(int off)
-{
-	char *result = winstart();
-	while (off > 0) {
-		if (!inbuf(result))
-			return NULL;
-		if (*result == '\n')
-			off--;
-		result++;
-	}
-	return result;
-}
-
-char *endofline(char *p)
-{
-	assert(inbuf(p));
-	for (; p != getbufend() && *p != '\n'; p++);
-	return p;
-}
+#define screenline(n) (skipscreenlines(winstart(), n))
 
 void pc(char c)
 {
@@ -313,7 +294,7 @@ void movecursor(char *t){
 	// so we can figure out the offset in order to highlight the cursor
 	int offset = 0;
 	int linenumber = findcharcount(winstart(), t, '\n');
-	char* linestart = startofline(linenumber);
+	char* linestart = screenline(linenumber);
 	if (linestart) {
 		char* iter = linestart;
 			while (iter != t) {
@@ -522,10 +503,10 @@ struct linerange huntlinerange(void)
 	if (endoffset == -1)
 		goto retnull;
 	orienti(&startoffset, &endoffset);
-	char *start = startofline(startoffset);
+	char *start = screenline(startoffset);
 	if (start == NULL)
 		goto retnull;
-	char *lstart = startofline(endoffset);
+	char *lstart = screenline(endoffset);
 	if (lstart == NULL)
 		goto retnull;
 	char *end = endofline(lstart);
@@ -564,7 +545,7 @@ enum loopsig lineoverlaycmd(void)
 		char nstr[32];
 		snprintf(nstr, sizeof(nstr), "%4d", lineno);
 		mvaddstr(screenline, 0, nstr);
-		char *lstart = startofline(fileline);
+		char *lstart = screenline(fileline);
 		if (lstart == NULL)
 			break;
 		screenline += screenlines(lstart);

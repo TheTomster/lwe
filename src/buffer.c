@@ -137,3 +137,9 @@ char *getbufend(void)
 	return buffer + contentsz;
 }
 
+char *endofline(char *p)
+{
+	assert(inbuf(p));
+	for (; p != getbufend() && *p != '\n'; p++);
+	return p;
+}
