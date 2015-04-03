@@ -14,11 +14,6 @@ struct {
 	char *start;
 	char *end;
 } bounds;
-enum {
-	UNSET,
-	CLEAN,
-	DIRTY
-} dirty;
 
 int scroll_line()
 {
@@ -27,7 +22,6 @@ int scroll_line()
 
 void set_scroll(int n)
 {
-	dirty = DIRTY;
 	lwe_scroll = n;
 	if (lwe_scroll < 0)
 		lwe_scroll = 0;
@@ -49,7 +43,6 @@ char *winend()
 
 static void refresh_bounds()
 {
-	if (dirty == CLEAN) return;
 	bounds.start = skipscreenlines(getbufptr(), scroll_line());
 	int r = 0, c = 0;
 	bounds.end = bounds.start;
@@ -64,7 +57,6 @@ static void refresh_bounds()
 	}
 	if (bounds.end > bounds.start && *bounds.end == '\n') bounds.end--;
 	assert(inbuf(bounds.start) && inbuf(bounds.end));
-	dirty = CLEAN;
 }
 
 char *skipscreenlines(char *start, int lines)
