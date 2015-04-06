@@ -1,5 +1,7 @@
 /* (C) 2015 Tom Wright. */
 
+void initcurses(void);
+
 int scroll_line(void);
 void set_scroll(int n);
 
@@ -18,5 +20,3 @@ char *skipscreenlines(char *start, int lines);
 void pc(char c); // TODO hide this
 void drawmodeline(char *filename, char *mode); // TODO hide this
 void old_draw(char *filename, char *mode);
-
-#define LLWE_CYAN 1 // TODO hide

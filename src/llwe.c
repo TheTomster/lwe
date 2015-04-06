@@ -15,8 +15,6 @@
 #define C_U 21
 #define C_W 23
 
-#define LLWE_CYAN 1
-
 char *filename, *mode;
 char *yanks[26];
 int yanksizes[26];
@@ -650,18 +648,6 @@ int cmdloop(void)
 			return 0;
 	}
 	return 0;
-}
-
-void initcurses()
-{
-	initscr();
-	cbreak();
-	noecho();
-	nonl();
-	intrflush(stdscr, FALSE);
-	keypad(stdscr, TRUE);
-	start_color();
-	init_pair(LLWE_CYAN, COLOR_CYAN, COLOR_BLACK);
 }
 
 int main(int argc, char **argv)
