@@ -380,7 +380,7 @@ int insertmode(char *t)
 			c = '\n';
 		if (c == C_D)
 			return 1;
-		if (c == KEY_BACKSPACE) {
+		if (c == KEY_BACKSPACE || c == 127) {
 			if (t <= getbufptr())
 				continue;
 			t--;
