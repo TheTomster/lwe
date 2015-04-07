@@ -652,21 +652,24 @@ int cmdloop(void)
 
 int main(int argc, char **argv)
 {
-	char errbuf[256];
+	initcurses();
+
 	if (argc != 2) {
 		seterr("missing file arg");
-		goto error;
 	} else {
-		initcurses();
 		filename = argv[1];
 		if (bufread(filename))
 			cmdloop();
-		endwin();
 	}
-	error:
+
+	endwin();
+
+	char errbuf[256];
 	geterr(errbuf, sizeof(errbuf));
-	if (errbuf[0] == '\0')
+	if (errbuf[0] == '\0') {
 		return 0;
-	fprintf(stderr, "error: %s\n", errbuf);
-	return 1;
+	} else {
+		fprintf(stderr, "error: %s\n", errbuf);
+		return 1;
+	}
 }
