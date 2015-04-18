@@ -41,30 +41,18 @@ char *find(char c, int n)
 	return 0;
 }
 
-int count(char c)
+int countwithin(char *start, char *end, char c)
 {
-	int ct;
-	char *i;
-	ct = 0;
-	for (i = winstart(); i != winend(); i++)
+	int ct = 0;
+	for (char *i = start; i != end; i++)
 		if (*i == c)
 			ct++;
 	return ct;
 }
 
-int findcharcount(char *s, char *e, char c)
+int count(char c)
 {
-	int count = 0;
-	if(!s || !e){
-		return count;
-	}
-	while(s != e){
-		if(*s == c){
-			count++;
-		}
-		s++;
-	}
-	return count;
+	return countwithin(winstart(), winend(), c);
 }
 
 void ptarg(int count)
@@ -260,7 +248,7 @@ void movecursor(char *t){
 	// along with how much space each tab is actually taking up
 	// so we can figure out the offset in order to highlight the cursor
 	int offset = 0;
-	int linenumber = findcharcount(winstart(), t, '\n');
+	int linenumber = countwithin(winstart(), t, '\n');
 	char* linestart = screenline(linenumber);
 	if (linestart) {
 		char* iter = linestart;
