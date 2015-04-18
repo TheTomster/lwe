@@ -32,6 +32,11 @@ void set_scroll(int n)
 		lwe_scroll = 0;
 }
 
+void adjust_scroll(int delta)
+{
+	set_scroll(scroll_line() + delta);
+}
+
 char *winstart()
 {
 	refresh_bounds();

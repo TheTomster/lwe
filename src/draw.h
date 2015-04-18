@@ -4,6 +4,7 @@ void initcurses(void);
 
 int scroll_line(void);
 void set_scroll(int n);
+void adjust_scroll(int delta);
 
 /* Get window boundaries */
 char *winstart(void);

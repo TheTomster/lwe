@@ -22,11 +22,6 @@ int yanksizes[26];
 #define bufempty() (getbufptr() == getbufend())
 #define screenline(n) (skipscreenlines(winstart(), n))
 
-void doscrl(int d)
-{
-	set_scroll(scroll_line() + d);
-}
-
 char *find(char c, int n)
 {
 	char *i;
@@ -144,7 +139,7 @@ int insertmode(char *t)
 	for (;;) {
 		old_draw(filename, mode);
 		if (t > winend())
-			doscrl(LINES / 2);
+			adjust_scroll(LINES / 2);
 		movecursor(t);
 		c = getch();
 		if (c == '\r')
@@ -191,13 +186,13 @@ typedef enum loopsig (*command_fn) (void);
 
 enum loopsig scrolldown(void)
 {
-	doscrl(LINES / 2);
+	adjust_scroll(LINES / 2);
 	return LOOP_SIGCNT;
 }
 
 enum loopsig scrollup(void)
 {
-	doscrl(-LINES / 2);
+	adjust_scroll(-LINES / 2);
 	return LOOP_SIGCNT;
 }
 
@@ -331,7 +326,7 @@ enum loopsig jumptolinecmd(void)
 	if (i == 0)
 		return LOOP_SIGCNT;
 	set_scroll(i);
-	doscrl(-LINES / 2);
+	adjust_scroll(-LINES / 2);
 	return LOOP_SIGCNT;
 }
 
