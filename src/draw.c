@@ -8,8 +8,6 @@
 #include "draw.h"
 #include "buffer.h"
 
-#define LLWE_CYAN 1
-
 int lwe_scroll;
 
 struct {
@@ -99,9 +97,7 @@ void drawmodeline(char *filename, char *mode)
 	char buf[8192];
 	snprintf(buf, sizeof(buf), "[F: %-32.32s][M: %-24s][L: %8d]",
 			filename, mode, scroll_line());
-	attron(COLOR_PAIR(LLWE_CYAN));
 	mvaddstr(r, 0, buf);
-	attroff(COLOR_PAIR(LLWE_CYAN));
 }
 
 void old_draw(char *filename, char *mode)
@@ -123,8 +119,6 @@ void initcurses()
 	nonl();
 	intrflush(stdscr, FALSE);
 	keypad(stdscr, TRUE);
-	start_color();
-	init_pair(LLWE_CYAN, COLOR_CYAN, COLOR_BLACK);
 }
 
 void drawdisamb(char c, int lvl, int toskip, char *filename, char *mode)
