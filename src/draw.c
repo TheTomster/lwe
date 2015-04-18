@@ -17,6 +17,11 @@ struct {
 	char *end;
 } bounds;
 
+static void ptarg(int count);
+static void refresh_bounds(void);
+static void drawdisambchar(char c, int toskip, char *i, int *tcount);
+static void nextline(char **p);
+
 int scroll_line()
 {
 	return lwe_scroll;
@@ -28,8 +33,6 @@ void set_scroll(int n)
 	if (lwe_scroll < 0)
 		lwe_scroll = 0;
 }
-
-static void refresh_bounds(void);
 
 char *winstart()
 {
@@ -124,3 +127,102 @@ void initcurses()
 	init_pair(LLWE_CYAN, COLOR_CYAN, COLOR_BLACK);
 }
 
+void drawdisamb(char c, int lvl, int toskip, char *filename, char *mode)
+{
+	erase();
+	move(0, 0);
+	int tcount = 0;
+	for (char *i = winstart(); i < winend(); i++) {
+		drawdisambchar(c, toskip, i, &tcount);
+		if (*i != c)
+			continue;
+		toskip = (toskip > 0) ? (toskip - 1) : skips(lvl);
+	}
+	drawmodeline(filename, mode);
+	refresh();
+}
+
+static void drawdisambchar(char c, int toskip, char *i, int *tcount)
+{
+	if (*i == c && toskip <= 0) {
+		ptarg(*tcount);
+		(*tcount)++;
+	} else {
+		pc(*i);
+	}
+}
+
+static void ptarg(int count)
+{
+	char a;
+	a = 'a' + (count % 26);
+	attron(A_STANDOUT);
+	pc(a);
+	attroff(A_STANDOUT);
+}
+
+void drawlinelbls(int lvl, int off, char *filename, char *mode)
+{
+	old_draw(filename, mode);
+	int count = 0;
+	char *p = winstart();
+	int toskip = off;
+	for (int line = 0; line < LINES - 1;) {
+		if (toskip == 0) {
+			move(line, 0);
+			ptarg(count++);
+			toskip = skips(lvl);
+		} else {
+			toskip--;
+		}
+		line += screenlines(p);
+		nextline(&p);
+	}
+	refresh();
+}
+
+static void nextline(char **p)
+{
+	assert(inbuf(*p));
+	for (;*p < getbufend(); (*p)++)
+		if (**p == '\n') {
+			(*p)++;
+			break;
+		}
+	assert(inbuf(*p));
+}
+
+int skips(int lvl)
+{
+	if (lvl == 0)
+		return 0;
+	int i = 1;
+	while (lvl > 0) {
+		lvl--;
+		i *= 26;
+	}
+	return i - 1;
+}
+
+bool onlymatch(char c, int lvl, int toskip)
+{
+	// If the initial skip + this level's skip in between matches is
+	// greater than the count of matching characters in the window,
+	// then we have narrowed it down to just one choice.  The second
+	// match would have to be past the end of the window.
+	return skips(lvl) + toskip + 1 >= count(c);
+}
+
+int countwithin(char *start, char *end, char c)
+{
+	int ct = 0;
+	for (char *i = start; i != end; i++)
+		if (*i == c)
+			ct++;
+	return ct;
+}
+
+int count(char c)
+{
+	return countwithin(winstart(), winend(), c);
+}

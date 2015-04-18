@@ -41,132 +41,6 @@ char *find(char c, int n)
 	return 0;
 }
 
-int countwithin(char *start, char *end, char c)
-{
-	int ct = 0;
-	for (char *i = start; i != end; i++)
-		if (*i == c)
-			ct++;
-	return ct;
-}
-
-int count(char c)
-{
-	return countwithin(winstart(), winend(), c);
-}
-
-void ptarg(int count)
-{
-	char a;
-	a = 'a' + (count % 26);
-	attron(A_STANDOUT);
-	pc(a);
-	attroff(A_STANDOUT);
-}
-
-int skips(int lvl)
-{
-	if (lvl == 0)
-		return 0;
-	int i = 1;
-	while (lvl > 0) {
-		lvl--;
-		i *= 26;
-	}
-	return i - 1;
-}
-
-void drawdisambchar(char c, int toskip, char *i, int *tcount)
-{
-	if (*i == c && toskip <= 0) {
-		ptarg(*tcount);
-		(*tcount)++;
-	} else {
-		pc(*i);
-	}
-}
-
-void drawdisamb(char c, int lvl, int toskip)
-{
-	erase();
-	move(0, 0);
-	int tcount = 0;
-	for (char *i = winstart(); i < winend(); i++) {
-		drawdisambchar(c, toskip, i, &tcount);
-		if (*i != c)
-			continue;
-		toskip = (toskip > 0) ? (toskip - 1) : skips(lvl);
-	}
-	drawmodeline(filename, mode);
-	refresh();
-}
-
-bool onlymatch(char c, int lvl, int toskip)
-{
-	// If the initial skip + this level's skip in between matches is
-	// greater than the count of matching characters in the window,
-	// then we have narrowed it down to just one choice.  The second
-	// match would have to be past the end of the window.
-	return skips(lvl) + toskip + 1 >= count(c);
-}
-
-char *disamb(char c)
-{
-	int lvl = 0;
-	int toskip = 0;
-	while (!onlymatch(c, lvl, toskip)) {
-		drawdisamb(c, lvl, toskip);
-		char input = getch();
-		int i = input - 'a';
-		if (i < 0 || i >= 26)
-			return NULL;
-		toskip += i * (skips(lvl) + 1);
-		lvl++;
-	}
-	return find(c, toskip);
-}
-
-char *hunt(void)
-{
-	char c;
-	if (bufempty())
-		return getbufptr();
-	old_draw(filename, mode);
-	c = getch();
-	return disamb(c);
-}
-
-void nextline(char **p)
-{
-	assert(inbuf(*p));
-	for (;*p < getbufend(); (*p)++)
-		if (**p == '\n') {
-			(*p)++;
-			break;
-		}
-	assert(inbuf(*p));
-}
-
-void drawlinelbls(int lvl, int off)
-{
-	old_draw(filename, mode);
-	int count = 0;
-	char *p = winstart();
-	int toskip = off;
-	for (int line = 0; line < LINES - 1;) {
-		if (toskip == 0) {
-			move(line, 0);
-			ptarg(count++);
-			toskip = skips(lvl);
-		} else {
-			toskip--;
-		}
-		line += screenlines(p);
-		nextline(&p);
-	}
-	refresh();
-}
-
 bool lineselected(int lvl, int off)
 {
 	return off + skips(lvl) > LINES;
@@ -189,7 +63,7 @@ int linehunt(void)
 	if (bufempty())
 		return -1;
 	while (!lineselected(lvl, off)) {
-		drawlinelbls(lvl, off);
+		drawlinelbls(lvl, off, filename, mode);
 		off = getoffset(lvl, off);
 		if (off < 0)
 			return -1;
@@ -330,6 +204,32 @@ enum loopsig scrollup(void)
 enum loopsig quitcmd(void)
 {
 	return LOOP_SIGQUIT;
+}
+
+char *disamb(char c)
+{
+	int lvl = 0;
+	int toskip = 0;
+	while (!onlymatch(c, lvl, toskip)) {
+		drawdisamb(c, lvl, toskip, filename, mode);
+		char input = getch();
+		int i = input - 'a';
+		if (i < 0 || i >= 26)
+			return NULL;
+		toskip += i * (skips(lvl) + 1);
+		lvl++;
+	}
+	return find(c, toskip);
+}
+
+char *hunt(void)
+{
+	char c;
+	if (bufempty())
+		return getbufptr();
+	old_draw(filename, mode);
+	c = getch();
+	return disamb(c);
 }
 
 enum loopsig insertcmd(void)
