@@ -22,6 +22,8 @@ int yanksizes[26];
 #define bufempty() (getbufptr() == getbufend())
 #define screenline(n) (skipscreenlines(winstart(), n))
 
+/* Finds the nth occurance of character c within the window.  Returns a
+ * buffer pointer. */
 char *find(char c, int n)
 {
 	char *i;
@@ -36,11 +38,18 @@ char *find(char c, int n)
 	return 0;
 }
 
+/* Returns true if there is only one line on screen that matches the
+ * given lvl and offset.  Since there could be more than 26 lines on
+ * screen we have to perform disambiguation, and this function tells us
+ * when to stop. */
 bool lineselected(int lvl, int off)
 {
 	return off + skips(lvl) > LINES;
 }
 
+/* Given a disamb level and offset (from previous layers of disamb),
+ * queries the user for the next selection.  Reads a char from input
+ * and calculates the offset for the next layer of disambiguation. */
 int getoffset(int lvl, int off)
 {
 	char c = getch();
@@ -51,6 +60,10 @@ int getoffset(int lvl, int off)
 	return off + delta;
 }
 
+/* Allow the user to select any line on the screen.  Returns the line
+ * number (where the top of the screen is 0) that the user has selected.
+ * This requires multiple layers of disambiguation of we have more than
+ * 26 lines on screen. */
 int linehunt(void)
 {
 	int lvl = 0;
@@ -67,7 +80,11 @@ int linehunt(void)
 	return off;
 }
 
-void shiftring(void)
+/* Yanked text is stored in malloc'd buffers.  The yanks array is an
+ * array of pointers to these buffers.  When a new item is yanked, we
+ * want to shift everything down, dropping the last item in order to
+ * make room for the new item. */
+void shiftyanks(void)
 {
 	if (yanks[25] != NULL)
 		free(yanks[25]);
@@ -75,11 +92,12 @@ void shiftring(void)
 	memmove(&yanksizes[1], &yanksizes[0], sizeof(yanksizes[0]) * 25);
 }
 
+/* Copies the text indicated by start and end into a new yank entry. */
 void yank(char *start, char *end)
 {
 	if (end != getbufend())
 		end++;
-	shiftring();
+	shiftyanks();
 	int sz = end - start;
 	assert(sz >= 0);
 	yanksizes[0] = sz;
@@ -87,6 +105,7 @@ void yank(char *start, char *end)
 	memcpy(yanks[0], start, sz);
 }
 
+/* Deletes some text from the buffer, storing it in a new yank entry. */
 void delete(char *start, char *end)
 {
 	if (end != getbufend())
@@ -94,6 +113,9 @@ void delete(char *start, char *end)
 	bufdelete(start, end);
 }
 
+/* Deletes a word.  `t` is a pointer to a buffer pointer.  The pointer will be
+ * moved back to before the previous word, and delete will be called to remove
+ * the word from the buffer. */
 void ruboutword(char **t)
 {
 	// Don't delete letter that our cursor is on otherwise we would
@@ -111,6 +133,7 @@ void ruboutword(char **t)
 	*t = dstart;
 }
 
+/* Moves the terminal cursor to point to the given buffer location on screen. */
 void movecursor(char *t){
 	if (!t) 
 		return;
@@ -133,6 +156,8 @@ void movecursor(char *t){
 	}
 }
 
+/* Reads user input and updates the buffer / screen while the user is
+ * inserting text. */
 int insertmode(char *t)
 {
 	mode = "INSERT";
@@ -172,12 +197,16 @@ int insertmode(char *t)
 	return 1;
 }
 
+/* After a command executes, we signal whether to continue the main loop,
+ * quit normally, or stop due to an error. */
 enum loopsig {
 	LOOP_SIGCNT,
 	LOOP_SIGQUIT,
 	LOOP_SIGERR
 };
 
+/* Convenience function for checking a boolean result.  On true we continue
+ * the main loop, on false we error. */
 enum loopsig checksig(bool ok)
 {
 	return ok ? LOOP_SIGCNT : LOOP_SIGERR;
@@ -202,6 +231,11 @@ enum loopsig quitcmd(void)
 	return LOOP_SIGQUIT;
 }
 
+/* In most cases when a user targets a character, there will be more than
+ * one instance of that character visible on screen.  Disambiguation is
+ * the process of refining the user's selection to the specific instance
+ * that they are interested in.  We repeatedly ask for more input until
+ * only one instance matches their inputs. */
 char *disamb(char c)
 {
 	int lvl = 0;
@@ -218,6 +252,10 @@ char *disamb(char c)
 	return find(c, toskip);
 }
 
+/* Starts off the process of choosing where an action should occur.  For an
+ * empty buffer there's no choice but to start the buffer.  For all other
+ * cases we ask the user for a character and start up the disambiguation
+ * process. */
 char *hunt(void)
 {
 	char c;
@@ -265,6 +303,9 @@ enum loopsig writecmd(void)
 	return LOOP_SIGCNT;
 }
 
+/* We'll allow users to enter the start / end of ranged commands like delete
+ * in either order.  orient flips the pointers so that the start always comes
+ * before the end in the buffer. */
 void orient(char **start, char **end)
 {
 	if (*end < *start) {
@@ -333,6 +374,8 @@ enum loopsig jumptolinecmd(void)
 	return LOOP_SIGCNT;
 }
 
+/* orienti is similar to orient, but for integers.  This is useful for line
+ * offsets. */
 void orienti(int *a, int *b)
 {
 	if (*b < *a) {
@@ -347,6 +390,10 @@ struct linerange {
 	char *end;
 };
 
+/* Similar idea to hunt, but for a range of lines.  Pretty much just uses
+ * linehunt to get the start / end of the range.  Also guarantees the start
+ * and end will be oriented properly, and returns NULL for both if there is a
+ * problem with either. */
 struct linerange huntlinerange(void)
 {
 	int startoffset = linehunt();
@@ -390,6 +437,7 @@ enum loopsig changelinescmd(void)
 	return checksig(insertmode(r.start));
 }
 
+/* Draws line numbers on the screen until dismissed with a key press. */
 enum loopsig lineoverlaycmd(void)
 {
 	int lineno = scroll_line() + 1;
@@ -441,6 +489,7 @@ struct yankstr {
 	char *end;
 };
 
+/* Presents a menu for deciding which yanked string to use. */
 struct yankstr yankhunt(void)
 {
 	clear();
@@ -494,6 +543,9 @@ enum loopsig putcmd(void)
 	return checksig(bufinsertstr(y.start, y.end, t));
 }
 
+/* The list of all commands.  Unused entries will be NULL.  A character
+ * can be used as the index into this array to look up the appropriate
+ * command. */
 command_fn cmdtbl[512] = {
 	[C_D] = scrolldown,
 	[KEY_DOWN] = scrolldown,
