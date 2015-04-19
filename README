@@ -20,6 +20,9 @@ Quick command reference:
     g            goto line
     D            delete lines
     C            change lines
+    y            yank text
+    o            paste before
+    p            paste after
 
 
 Cursorless editing
