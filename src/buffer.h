@@ -8,3 +8,7 @@ void bufdelete(char *start, char *end);
 char *getbufptr(void);
 char *getbufend(void);
 
+#define inbuf(p) (p >= getbufptr() && p <= getbufend())
+
+char *startofline(int off);
+char *endofline(char *p);
