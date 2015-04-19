@@ -77,6 +77,8 @@ void shiftring(void)
 
 void yank(char *start, char *end)
 {
+	if (end != getbufend())
+		end++;
 	shiftring();
 	int sz = end - start;
 	assert(sz >= 0);
@@ -89,7 +91,6 @@ void delete(char *start, char *end)
 {
 	if (end != getbufend())
 		end++;
-	yank(start, end);
 	bufdelete(start, end);
 }
 
@@ -283,6 +284,7 @@ enum loopsig deletecmd(void)
 	if (end == NULL)
 		return LOOP_SIGCNT;
 	orient(&start, &end);
+	yank(start, end);
 	delete(start, end);
 	return LOOP_SIGCNT;
 }
@@ -297,6 +299,7 @@ enum loopsig changecmd(void)
 	if (end == NULL)
 		return LOOP_SIGCNT;
 	orient(&start, &end);
+	yank(start, end);
 	delete(start, end);
 	return checksig(insertmode(start));
 }
@@ -371,6 +374,7 @@ enum loopsig deletelinescmd(void)
 	struct linerange r = huntlinerange();
 	if (r.start == NULL || r.end == NULL)
 		return LOOP_SIGCNT;
+	yank(r.start, r.end);
 	delete(r.start, r.end);
 	return LOOP_SIGCNT;
 }
@@ -381,6 +385,7 @@ enum loopsig changelinescmd(void)
 	struct linerange r = huntlinerange();
 	if (r.start == NULL || r.end == NULL)
 		return LOOP_SIGCNT;
+	yank(r.start, r.end);
 	delete(r.start, r.end);
 	return checksig(insertmode(r.start));
 }
