@@ -18,11 +18,10 @@ void draw(char *start, char *end);
 int screenlines(char *start);
 char *skipscreenlines(char *start, int lines);
 
-void pc(char c); // TODO hide this
 void drawmodeline(char *filename, char *mode); // TODO hide this
-void old_draw(char *filename, char *mode);
+void drawtext(void);
 void drawdisamb(char c, int lvl, int toskip, char *filename, char *mode);
-void drawlinelbls(int lvl, int off, char *filename, char *mode);
+void drawlinelbls(int lvl, int off);
 
 int skips(int lvl);
 bool onlymatch(char c, int lvl, int toskip);

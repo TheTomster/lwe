@@ -71,7 +71,8 @@ int linehunt(void)
 	if (bufempty())
 		return -1;
 	while (!lineselected(lvl, off)) {
-		drawlinelbls(lvl, off, filename, mode);
+		drawlinelbls(lvl, off);
+		drawmodeline(filename, mode);
 		off = getoffset(lvl, off);
 		if (off < 0)
 			return -1;
@@ -163,7 +164,8 @@ int insertmode(char *t)
 	mode = "INSERT";
 	int c;
 	for (;;) {
-		old_draw(filename, mode);
+		drawtext();
+		drawmodeline(filename, mode);
 		if (t > winend())
 			adjust_scroll(LINES / 2);
 		movecursor(t);
@@ -261,7 +263,8 @@ char *hunt(void)
 	char c;
 	if (bufempty())
 		return getbufptr();
-	old_draw(filename, mode);
+	drawtext();
+	drawmodeline(filename, mode);
 	c = getch();
 	return disamb(c);
 }
@@ -356,7 +359,8 @@ enum loopsig reloadcmd(void)
 enum loopsig jumptolinecmd(void)
 {
 	mode = "JUMP";
-	old_draw(filename, mode);
+	drawtext();
+	drawmodeline(filename, mode);
 	char buf[32];
 	memset(buf, '\0', 32);
 	for (int i = 0; i < 32; i++) {
@@ -576,7 +580,8 @@ int cmdloop(void)
 {
 	for (;;) {
 		mode = "COMMAND";
-		old_draw(filename, mode);
+		drawtext();
+		drawmodeline(filename, mode);
 		int c = getch();
 		command_fn cmd = cmdtbl[c];
 		if (cmd == NULL)

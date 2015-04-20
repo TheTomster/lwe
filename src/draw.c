@@ -15,6 +15,7 @@ struct {
 	char *end;
 } bounds;
 
+static void pc(char c);
 static void ptarg(int count);
 static void refresh_bounds(void);
 static void drawdisambchar(char c, int toskip, char *i, int *tcount);
@@ -87,7 +88,7 @@ int screenlines(char *start)
 	return (len / COLS) + 1;
 }
 
-void pc(char c)
+static void pc(char c)
 {
 	if (c == '\r')
 		c = '?';
@@ -105,14 +106,13 @@ void drawmodeline(char *filename, char *mode)
 	mvaddstr(r, 0, buf);
 }
 
-void old_draw(char *filename, char *mode)
+void drawtext()
 {
 	char *i;
 	erase();
 	move(0, 0);
 	for (i = winstart(); i < winend(); i++)
 		pc(*i);
-	drawmodeline(filename, mode);
 	refresh();
 }
 
@@ -160,9 +160,8 @@ static void ptarg(int count)
 	attroff(A_STANDOUT);
 }
 
-void drawlinelbls(int lvl, int off, char *filename, char *mode)
+void drawlinelbls(int lvl, int off)
 {
-	old_draw(filename, mode);
 	int count = 0;
 	char *p = winstart();
 	int toskip = off;
