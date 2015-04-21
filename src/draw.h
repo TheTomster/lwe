@@ -18,9 +18,9 @@ void draw(char *start, char *end);
 int screenlines(char *start);
 char *skipscreenlines(char *start, int lines);
 
-void drawmodeline(char *filename, char *mode); // TODO hide this
+void drawmodeline(char *filename, char *mode);
 void drawtext(void);
-void drawdisamb(char c, int lvl, int toskip, char *filename, char *mode);
+void drawdisamb(char c, int lvl, int toskip);
 void drawlinelbls(int lvl, int off);
 
 int skips(int lvl);

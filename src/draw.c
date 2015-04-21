@@ -18,8 +18,8 @@ struct {
 static void pc(char c);
 static void ptarg(int count);
 static void refresh_bounds(void);
-static void drawdisambchar(char c, int toskip, char *i, int *tcount);
 static void nextline(char **p);
+static void advcursor(char c);
 
 int scroll_line()
 {
@@ -126,29 +126,32 @@ void initcurses()
 	keypad(stdscr, TRUE);
 }
 
-void drawdisamb(char c, int lvl, int toskip, char *filename, char *mode)
+static void advcursor(char c)
 {
-	erase();
+	int row, column;
+	getyx(stdscr, row, column);
+	if (c == '\n') {
+		row++;
+		column = 0;
+	} else {
+		column++;
+	}
+	move(row, column);
+}
+
+void drawdisamb(char c, int lvl, int toskip)
+{
 	move(0, 0);
 	int tcount = 0;
 	for (char *i = winstart(); i < winend(); i++) {
-		drawdisambchar(c, toskip, i, &tcount);
-		if (*i != c)
-			continue;
-		toskip = (toskip > 0) ? (toskip - 1) : skips(lvl);
+		if (*i == c && toskip <= 0)
+			ptarg(tcount++);
+		else
+			advcursor(*i);
+		if (*i == c)
+			toskip = (toskip > 0) ? (toskip - 1) : skips(lvl);
 	}
-	drawmodeline(filename, mode);
 	refresh();
-}
-
-static void drawdisambchar(char c, int toskip, char *i, int *tcount)
-{
-	if (*i == c && toskip <= 0) {
-		ptarg(*tcount);
-		(*tcount)++;
-	} else {
-		pc(*i);
-	}
 }
 
 static void ptarg(int count)

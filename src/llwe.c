@@ -243,7 +243,9 @@ char *disamb(char c)
 	int lvl = 0;
 	int toskip = 0;
 	while (!onlymatch(c, lvl, toskip)) {
-		drawdisamb(c, lvl, toskip, filename, mode);
+		drawtext();
+		drawdisamb(c, lvl, toskip);
+		drawmodeline(filename, mode);
 		char input = getch();
 		int i = input - 'a';
 		if (i < 0 || i >= 26)
