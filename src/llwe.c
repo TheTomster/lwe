@@ -71,8 +71,11 @@ int linehunt(void)
 	if (bufempty())
 		return -1;
 	while (!lineselected(lvl, off)) {
+		clrscreen();
+		drawtext();
 		drawlinelbls(lvl, off);
 		drawmodeline(filename, mode);
+		present();
 		off = getoffset(lvl, off);
 		if (off < 0)
 			return -1;
@@ -164,8 +167,10 @@ int insertmode(char *t)
 	mode = "INSERT";
 	int c;
 	for (;;) {
+		clrscreen();
 		drawtext();
 		drawmodeline(filename, mode);
+		present();
 		if (t > winend())
 			adjust_scroll(LINES / 2);
 		movecursor(t);
@@ -243,9 +248,11 @@ char *disamb(char c)
 	int lvl = 0;
 	int toskip = 0;
 	while (!onlymatch(c, lvl, toskip)) {
+		clrscreen();
 		drawtext();
 		drawdisamb(c, lvl, toskip);
 		drawmodeline(filename, mode);
+		present();
 		char input = getch();
 		int i = input - 'a';
 		if (i < 0 || i >= 26)
@@ -265,8 +272,10 @@ char *hunt(void)
 	char c;
 	if (bufempty())
 		return getbufptr();
+	clrscreen();
 	drawtext();
 	drawmodeline(filename, mode);
+	present();
 	c = getch();
 	return disamb(c);
 }
@@ -302,7 +311,7 @@ enum loopsig writecmd(void)
 		mvaddstr(LINES-2, 0, nstr);
 		mvaddstr(LINES-1, 0, msg2);
 		attroff(A_STANDOUT);
-		refresh();
+		present();
 		getch();
 	}
 	return LOOP_SIGCNT;
@@ -361,8 +370,10 @@ enum loopsig reloadcmd(void)
 enum loopsig jumptolinecmd(void)
 {
 	mode = "JUMP";
+	clrscreen();
 	drawtext();
 	drawmodeline(filename, mode);
+	present();
 	char buf[32];
 	memset(buf, '\0', 32);
 	for (int i = 0; i < 32; i++) {
@@ -462,7 +473,7 @@ enum loopsig lineoverlaycmd(void)
 		lineno++;
 	}
 	attroff(A_STANDOUT);
-	refresh();
+	present();
 	getch();
 	return LOOP_SIGCNT;
 }
@@ -498,7 +509,7 @@ struct yankstr {
 /* Presents a menu for deciding which yanked string to use. */
 struct yankstr yankhunt(void)
 {
-	clear();
+	clrscreen();
 	int linestodraw = 26 < LINES ? 26 : LINES;
 	for (int i = 0; i < linestodraw; i++) {
 		attron(A_STANDOUT);
@@ -513,7 +524,7 @@ struct yankstr yankhunt(void)
 			addch(c);
 		}
 	}
-	refresh();
+	present();
 	int selected = getch() - 'a';
 	if (selected < 0 || selected > 25)
 		return (struct yankstr) {NULL, NULL};
@@ -582,8 +593,10 @@ int cmdloop(void)
 {
 	for (;;) {
 		mode = "COMMAND";
+		clrscreen();
 		drawtext();
 		drawmodeline(filename, mode);
+		present();
 		int c = getch();
 		command_fn cmd = cmdtbl[c];
 		if (cmd == NULL)

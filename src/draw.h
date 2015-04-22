@@ -1,6 +1,8 @@
 /* (C) 2015 Tom Wright. */
 
 void initcurses(void);
+void clrscreen(void);
+void present(void);
 
 int scroll_line(void);
 void set_scroll(int n);

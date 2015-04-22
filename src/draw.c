@@ -21,6 +21,16 @@ static void refresh_bounds(void);
 static void nextline(char **p);
 static void advcursor(char c);
 
+void present(void)
+{
+	refresh();
+}
+
+void clrscreen(void)
+{
+	erase();
+}
+
 int scroll_line()
 {
 	return lwe_scroll;
@@ -113,7 +123,6 @@ void drawtext()
 	move(0, 0);
 	for (i = winstart(); i < winend(); i++)
 		pc(*i);
-	refresh();
 }
 
 void initcurses()
@@ -151,7 +160,6 @@ void drawdisamb(char c, int lvl, int toskip)
 		if (*i == c)
 			toskip = (toskip > 0) ? (toskip - 1) : skips(lvl);
 	}
-	refresh();
 }
 
 static void ptarg(int count)
@@ -179,7 +187,6 @@ void drawlinelbls(int lvl, int off)
 		line += screenlines(p);
 		nextline(&p);
 	}
-	refresh();
 }
 
 static void nextline(char **p)
