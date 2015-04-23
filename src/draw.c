@@ -234,3 +234,23 @@ int count(char c)
 {
 	return countwithin(winstart(), winend(), c);
 }
+
+void drawlineoverlay(void)
+{
+	int lineno = scroll_line() + 1;
+	int screenline = 0;
+	int fileline = 0;
+	attron(A_STANDOUT);
+	while (screenline < LINES) {
+		char nstr[32];
+		snprintf(nstr, sizeof(nstr), "%4d", lineno);
+		mvaddstr(screenline, 0, nstr);
+		char *lstart = skipscreenlines(winstart(), fileline);
+		if (lstart == NULL)
+			break;
+		screenline += screenlines(lstart);
+		fileline++;
+		lineno++;
+	}
+	attroff(A_STANDOUT);
+}
