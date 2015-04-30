@@ -254,3 +254,11 @@ void drawlineoverlay(void)
 	}
 	attroff(A_STANDOUT);
 }
+
+void drawmessage(char *msg)
+{
+	assert(msg != NULL);
+	attron(A_STANDOUT);
+	mvaddstr(LINES - 1, 0, msg);
+	attroff(A_STANDOUT);
+}

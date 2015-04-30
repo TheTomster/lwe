@@ -139,7 +139,7 @@ void ruboutword(char **t)
 
 /* Moves the terminal cursor to point to the given buffer location on screen. */
 void movecursor(char *t){
-	if (!t) 
+	if (!t)
 		return;
 	// Figure out line number, number of tabs on the line,
 	// along with how much space each tab is actually taking up
@@ -303,14 +303,12 @@ enum loopsig appendcmd(void)
 enum loopsig writecmd(void)
 {
 	if (!bufwrite(filename)) {
-		const char msg1[] = "Error: Failed to write to: ";
-		const char msg2[] = "Press any key to continue.";
-		char nstr[strlen(msg1) + strlen(filename) + 1];
-		snprintf(nstr, sizeof(nstr), "%s%s", msg1, filename);
-		attron(A_STANDOUT);
-		mvaddstr(LINES-2, 0, nstr);
-		mvaddstr(LINES-1, 0, msg2);
-		attroff(A_STANDOUT);
+		clrscreen();
+		drawtext();
+		drawmodeline(filename, mode);
+		char messagebuf[256];
+		snprintf(messagebuf, sizeof(messagebuf), "Error -- failed to write to file: %s", filename);
+		drawmessage(messagebuf);
 		present();
 		getch();
 	}
