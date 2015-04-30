@@ -15,10 +15,21 @@ struct {
 	char *end;
 } bounds;
 
+static void pc(char c);
 static void ptarg(int count);
 static void refresh_bounds(void);
-static void drawdisambchar(char c, int toskip, char *i, int *tcount);
 static void nextline(char **p);
+static void advcursor(char c);
+
+void present(void)
+{
+	refresh();
+}
+
+void clrscreen(void)
+{
+	erase();
+}
 
 int scroll_line()
 {
@@ -87,7 +98,7 @@ int screenlines(char *start)
 	return (len / COLS) + 1;
 }
 
-void pc(char c)
+static void pc(char c)
 {
 	if (c == '\r')
 		c = '?';
@@ -105,15 +116,13 @@ void drawmodeline(char *filename, char *mode)
 	mvaddstr(r, 0, buf);
 }
 
-void old_draw(char *filename, char *mode)
+void drawtext()
 {
 	char *i;
 	erase();
 	move(0, 0);
 	for (i = winstart(); i < winend(); i++)
 		pc(*i);
-	drawmodeline(filename, mode);
-	refresh();
 }
 
 void initcurses()
@@ -126,28 +135,36 @@ void initcurses()
 	keypad(stdscr, TRUE);
 }
 
-void drawdisamb(char c, int lvl, int toskip, char *filename, char *mode)
+static void advcursor(char c)
 {
-	erase();
+	int row, column;
+	getyx(stdscr, row, column);
+	if (c == '\n') {
+		row++;
+		column = 0;
+	} else if (c == '\t') {
+		do column++; while(column % TABSIZE != 0);
+	} else {
+		column++;
+	}
+	if (column >= COLS) {
+		row++;
+		column = 0;
+	}
+	move(row, column);
+}
+
+void drawdisamb(char c, int lvl, int toskip)
+{
 	move(0, 0);
 	int tcount = 0;
 	for (char *i = winstart(); i < winend(); i++) {
-		drawdisambchar(c, toskip, i, &tcount);
-		if (*i != c)
-			continue;
-		toskip = (toskip > 0) ? (toskip - 1) : skips(lvl);
-	}
-	drawmodeline(filename, mode);
-	refresh();
-}
-
-static void drawdisambchar(char c, int toskip, char *i, int *tcount)
-{
-	if (*i == c && toskip <= 0) {
-		ptarg(*tcount);
-		(*tcount)++;
-	} else {
-		pc(*i);
+		if (*i == c && toskip <= 0)
+			ptarg(tcount++);
+		else
+			advcursor(*i);
+		if (*i == c)
+			toskip = (toskip > 0) ? (toskip - 1) : skips(lvl);
 	}
 }
 
@@ -160,9 +177,8 @@ static void ptarg(int count)
 	attroff(A_STANDOUT);
 }
 
-void drawlinelbls(int lvl, int off, char *filename, char *mode)
+void drawlinelbls(int lvl, int off)
 {
-	old_draw(filename, mode);
 	int count = 0;
 	char *p = winstart();
 	int toskip = off;
@@ -177,7 +193,6 @@ void drawlinelbls(int lvl, int off, char *filename, char *mode)
 		line += screenlines(p);
 		nextline(&p);
 	}
-	refresh();
 }
 
 static void nextline(char **p)
@@ -224,4 +239,32 @@ int countwithin(char *start, char *end, char c)
 int count(char c)
 {
 	return countwithin(winstart(), winend(), c);
+}
+
+void drawlineoverlay(void)
+{
+	int lineno = scroll_line() + 1;
+	int screenline = 0;
+	int fileline = 0;
+	attron(A_STANDOUT);
+	while (screenline < LINES) {
+		char nstr[32];
+		snprintf(nstr, sizeof(nstr), "%4d", lineno);
+		mvaddstr(screenline, 0, nstr);
+		char *lstart = skipscreenlines(winstart(), fileline);
+		if (lstart == NULL)
+			break;
+		screenline += screenlines(lstart);
+		fileline++;
+		lineno++;
+	}
+	attroff(A_STANDOUT);
+}
+
+void drawmessage(char *msg)
+{
+	assert(msg != NULL);
+	attron(A_STANDOUT);
+	mvaddstr(LINES - 1, 0, msg);
+	attroff(A_STANDOUT);
 }

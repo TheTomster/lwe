@@ -71,7 +71,11 @@ int linehunt(void)
 	if (bufempty())
 		return -1;
 	while (!lineselected(lvl, off)) {
-		drawlinelbls(lvl, off, filename, mode);
+		clrscreen();
+		drawtext();
+		drawlinelbls(lvl, off);
+		drawmodeline(filename, mode);
+		present();
 		off = getoffset(lvl, off);
 		if (off < 0)
 			return -1;
@@ -135,7 +139,7 @@ void ruboutword(char **t)
 
 /* Moves the terminal cursor to point to the given buffer location on screen. */
 void movecursor(char *t){
-	if (!t) 
+	if (!t)
 		return;
 	// Figure out line number, number of tabs on the line,
 	// along with how much space each tab is actually taking up
@@ -163,7 +167,10 @@ int insertmode(char *t)
 	mode = "INSERT";
 	int c;
 	for (;;) {
-		old_draw(filename, mode);
+		clrscreen();
+		drawtext();
+		drawmodeline(filename, mode);
+		present();
 		if (t > winend())
 			adjust_scroll(LINES / 2);
 		movecursor(t);
@@ -241,7 +248,11 @@ char *disamb(char c)
 	int lvl = 0;
 	int toskip = 0;
 	while (!onlymatch(c, lvl, toskip)) {
-		drawdisamb(c, lvl, toskip, filename, mode);
+		clrscreen();
+		drawtext();
+		drawdisamb(c, lvl, toskip);
+		drawmodeline(filename, mode);
+		present();
 		char input = getch();
 		int i = input - 'a';
 		if (i < 0 || i >= 26)
@@ -261,7 +272,10 @@ char *hunt(void)
 	char c;
 	if (bufempty())
 		return getbufptr();
-	old_draw(filename, mode);
+	clrscreen();
+	drawtext();
+	drawmodeline(filename, mode);
+	present();
 	c = getch();
 	return disamb(c);
 }
@@ -289,15 +303,13 @@ enum loopsig appendcmd(void)
 enum loopsig writecmd(void)
 {
 	if (!bufwrite(filename)) {
-		const char msg1[] = "Error: Failed to write to: ";
-		const char msg2[] = "Press any key to continue.";
-		char nstr[strlen(msg1) + strlen(filename) + 1];
-		snprintf(nstr, sizeof(nstr), "%s%s", msg1, filename);
-		attron(A_STANDOUT);
-		mvaddstr(LINES-2, 0, nstr);
-		mvaddstr(LINES-1, 0, msg2);
-		attroff(A_STANDOUT);
-		refresh();
+		clrscreen();
+		drawtext();
+		drawmodeline(filename, mode);
+		char messagebuf[256];
+		snprintf(messagebuf, sizeof(messagebuf), "Error -- failed to write to file: %s", filename);
+		drawmessage(messagebuf);
+		present();
 		getch();
 	}
 	return LOOP_SIGCNT;
@@ -356,7 +368,10 @@ enum loopsig reloadcmd(void)
 enum loopsig jumptolinecmd(void)
 {
 	mode = "JUMP";
-	old_draw(filename, mode);
+	clrscreen();
+	drawtext();
+	drawmodeline(filename, mode);
+	present();
 	char buf[32];
 	memset(buf, '\0', 32);
 	for (int i = 0; i < 32; i++) {
@@ -440,23 +455,11 @@ enum loopsig changelinescmd(void)
 /* Draws line numbers on the screen until dismissed with a key press. */
 enum loopsig lineoverlaycmd(void)
 {
-	int lineno = scroll_line() + 1;
-	int screenline = 0;
-	int fileline = 0;
-	attron(A_STANDOUT);
-	while (screenline < LINES) {
-		char nstr[32];
-		snprintf(nstr, sizeof(nstr), "%4d", lineno);
-		mvaddstr(screenline, 0, nstr);
-		char *lstart = screenline(fileline);
-		if (lstart == NULL)
-			break;
-		screenline += screenlines(lstart);
-		fileline++;
-		lineno++;
-	}
-	attroff(A_STANDOUT);
-	refresh();
+	clrscreen();
+	drawtext();
+	drawmodeline(filename, mode);
+	drawlineoverlay();
+	present();
 	getch();
 	return LOOP_SIGCNT;
 }
@@ -492,7 +495,7 @@ struct yankstr {
 /* Presents a menu for deciding which yanked string to use. */
 struct yankstr yankhunt(void)
 {
-	clear();
+	clrscreen();
 	int linestodraw = 26 < LINES ? 26 : LINES;
 	for (int i = 0; i < linestodraw; i++) {
 		attron(A_STANDOUT);
@@ -507,7 +510,7 @@ struct yankstr yankhunt(void)
 			addch(c);
 		}
 	}
-	refresh();
+	present();
 	int selected = getch() - 'a';
 	if (selected < 0 || selected > 25)
 		return (struct yankstr) {NULL, NULL};
@@ -576,7 +579,10 @@ int cmdloop(void)
 {
 	for (;;) {
 		mode = "COMMAND";
-		old_draw(filename, mode);
+		clrscreen();
+		drawtext();
+		drawmodeline(filename, mode);
+		present();
 		int c = getch();
 		command_fn cmd = cmdtbl[c];
 		if (cmd == NULL)
