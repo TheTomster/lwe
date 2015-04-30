@@ -142,8 +142,14 @@ static void advcursor(char c)
 	if (c == '\n') {
 		row++;
 		column = 0;
+	} else if (c == '\t') {
+		do column++; while(column % TABSIZE != 0);
 	} else {
 		column++;
+	}
+	if (column >= COLS) {
+		row++;
+		column = 0;
 	}
 	move(row, column);
 }
