@@ -10,14 +10,13 @@
 #include "buffer.h"
 #include "err.h"
 #include "draw.h"
+#include "yank.h"
 
 #define C_D 4
 #define C_U 21
 #define C_W 23
 
 char *filename, *mode;
-char *yanks[26];
-int yanksizes[26];
 
 #define bufempty() (getbufptr() == getbufend())
 #define screenline(n) (skipscreenlines(winstart(), n))
@@ -84,29 +83,12 @@ int linehunt(void)
 	return off;
 }
 
-/* Yanked text is stored in malloc'd buffers.  The yanks array is an
- * array of pointers to these buffers.  When a new item is yanked, we
- * want to shift everything down, dropping the last item in order to
- * make room for the new item. */
-void shiftyanks(void)
-{
-	if (yanks[25] != NULL)
-		free(yanks[25]);
-	memmove(&yanks[1], &yanks[0], sizeof(yanks[0]) * 25);
-	memmove(&yanksizes[1], &yanksizes[0], sizeof(yanksizes[0]) * 25);
-}
-
 /* Copies the text indicated by start and end into a new yank entry. */
 void yank(char *start, char *end)
 {
 	if (end != getbufend())
 		end++;
-	shiftyanks();
-	int sz = end - start;
-	assert(sz >= 0);
-	yanksizes[0] = sz;
-	yanks[0] = malloc(sz);
-	memcpy(yanks[0], start, sz);
+	yank_store(start, end);
 }
 
 /* Deletes some text from the buffer, storing it in a new yank entry. */
@@ -496,15 +478,19 @@ struct yankstr {
 struct yankstr yankhunt(void)
 {
 	clrscreen();
-	int linestodraw = 26 < LINES ? 26 : LINES;
+	int nyanks = yank_sz();
+	int linestodraw = nyanks < LINES ? nyanks : LINES;
 	for (int i = 0; i < linestodraw; i++) {
 		attron(A_STANDOUT);
 		mvaddch(i, 0, 'a' + i);
 		attroff(A_STANDOUT);
 		int previewsz = COLS - 2;
+		char *ytext;
+		int ysz;
+		yank_item(&ytext, &ysz, i);
 		char preview[previewsz];
-		snprintf(preview, previewsz, "%s", yanks[i]);
-		for (int j = 0; j < yanksizes[i] && j < previewsz; j++) {
+		snprintf(preview, previewsz, "%s", ytext);
+		for (int j = 0; j < ysz && j < previewsz; j++) {
 			char c = preview[j];
 			c = (isgraph(c) || c == ' ') ? c : '?';
 			addch(c);
@@ -512,11 +498,12 @@ struct yankstr yankhunt(void)
 	}
 	present();
 	int selected = getch() - 'a';
-	if (selected < 0 || selected > 25)
+	if (selected < 0 || selected >= nyanks)
 		return (struct yankstr) {NULL, NULL};
 	struct yankstr result;
-	result.start = yanks[selected];
-	result.end = result.start + yanksizes[selected];
+	int ysz;
+	yank_item(&result.start, &ysz, selected);
+	result.end = result.start + ysz;
 	return result;
 }
 
