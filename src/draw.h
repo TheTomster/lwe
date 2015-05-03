@@ -24,6 +24,7 @@ void drawdisamb(char c, int lvl, int toskip);
 void drawlinelbls(int lvl, int off);
 void drawlineoverlay(void);
 void drawmessage(char *msg);
+void drawyanks(void);
 
 int skips(int lvl);
 bool onlymatch(char c, int lvl, int toskip);

@@ -478,27 +478,10 @@ struct yankstr {
 struct yankstr yankhunt(void)
 {
 	clrscreen();
-	int nyanks = yank_sz();
-	int linestodraw = nyanks < LINES ? nyanks : LINES;
-	for (int i = 0; i < linestodraw; i++) {
-		attron(A_STANDOUT);
-		mvaddch(i, 0, 'a' + i);
-		attroff(A_STANDOUT);
-		int previewsz = COLS - 2;
-		char *ytext;
-		int ysz;
-		yank_item(&ytext, &ysz, i);
-		char preview[previewsz];
-		snprintf(preview, previewsz, "%s", ytext);
-		for (int j = 0; j < ysz && j < previewsz; j++) {
-			char c = preview[j];
-			c = (isgraph(c) || c == ' ') ? c : '?';
-			addch(c);
-		}
-	}
+	drawyanks();
 	present();
 	int selected = getch() - 'a';
-	if (selected < 0 || selected >= nyanks)
+	if (selected < 0 || selected >= yank_sz())
 		return (struct yankstr) {NULL, NULL};
 	struct yankstr result;
 	int ysz;

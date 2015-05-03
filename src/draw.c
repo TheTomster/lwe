@@ -7,6 +7,7 @@
 
 #include "draw.h"
 #include "buffer.h"
+#include "yank.h"
 
 int lwe_scroll;
 
@@ -267,4 +268,26 @@ void drawmessage(char *msg)
 	attron(A_STANDOUT);
 	mvaddstr(LINES - 1, 0, msg);
 	attroff(A_STANDOUT);
+}
+
+void drawyanks()
+{
+	int nyanks = yank_sz();
+	int linestodraw = nyanks < LINES ? nyanks : LINES;
+	for (int i = 0; i < linestodraw; i++) {
+		attron(A_STANDOUT);
+		mvaddch(i, 0, 'a' + i);
+		attroff(A_STANDOUT);
+		char *ytext;
+		int ysz;
+		yank_item(&ytext, &ysz, i);
+		int previewsz = COLS - 2;
+		char preview[previewsz];
+		snprintf(preview, previewsz, "%s", ytext);
+		for (int j = 0; j < ysz && j < previewsz; j++) {
+			char c = preview[j];
+			c = (isgraph(c) || c == ' ') ? c : '?';
+			addch(c);
+		}
+	}
 }
