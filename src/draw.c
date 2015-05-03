@@ -75,7 +75,10 @@ static void refresh_bounds()
 			r++;
 		bounds.end++;
 	}
-	if (bounds.end > bounds.start && *bounds.end == '\n') bounds.end--;
+	if (bounds.end >= getbufend())
+		bounds.end = getbufend() - 1;
+	else if (bounds.end > bounds.start && *bounds.end == '\n')
+		bounds.end--;
 	assert(inbuf(bounds.start) && inbuf(bounds.end));
 }
 
