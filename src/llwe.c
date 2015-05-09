@@ -120,26 +120,27 @@ void ruboutword(char **t)
 }
 
 /* Moves the terminal cursor to point to the given buffer location on screen. */
-void movecursor(char *t){
-	if (!t)
-		return;
-	// Figure out line number, number of tabs on the line,
-	// along with how much space each tab is actually taking up
-	// so we can figure out the offset in order to highlight the cursor
-	int offset = 0;
-	int linenumber = countwithin(winstart(), t, '\n');
-	char* linestart = screenline(linenumber);
-	if (linestart) {
-		char* iter = linestart;
-			while (iter != t) {
-				if (*iter == '\t')
-					offset += (TABSIZE - (offset % TABSIZE));
-				else
-					offset++;
-				iter++;
-			}
-		move(linenumber, offset);
+void movecursor(char *t)
+{
+	assert(inbuf(t));
+	int row = 0;
+	while (skipscreenlines(winstart(), row + 1) < t)
+		row++;
+	int column = 0;
+	char *i = skipscreenlines(winstart(), row);
+	while (i != t) {
+		assert(*i != '\n');
+		if (*i == '\t')
+			column += TABSIZE - (column % TABSIZE);
+		else
+			column++;
+		if (column > COLS - 1) {
+			row++;
+			column = 0;
+		}
+		i++;
 	}
+	move(row, column);
 }
 
 /* Reads user input and updates the buffer / screen while the user is

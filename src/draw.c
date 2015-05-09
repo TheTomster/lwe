@@ -85,7 +85,8 @@ char *skipscreenlines(char *start, int lines)
 		lines -= screenlines(start);
 		start = endofline(start) + 1;
 	}
-	start = start > getbufend() ? getbufend() : start;
+	if (start > getbufend())
+		start = getbufend();
 	return start;
 }
 
