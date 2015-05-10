@@ -125,7 +125,7 @@ void movecursor(char *t)
 {
 	assert(inbuf(t));
 	int row = 0;
-	while (skipscreenlines(winstart(), row + 1) < t)
+	while (skipscreenlines(winstart(), row + 1) <= t)
 		row++;
 	int column = 0;
 	char *i = skipscreenlines(winstart(), row);
