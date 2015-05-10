@@ -134,6 +134,7 @@ void initcurses()
 	nonl();
 	intrflush(stdscr, FALSE);
 	keypad(stdscr, TRUE);
+	ESCDELAY = 200;
 }
 
 static void advcursor(char c)
