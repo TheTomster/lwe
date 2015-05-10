@@ -95,7 +95,15 @@ int screenlines(char *start)
 	char *end = endofline(start);
 	if (start == NULL || end == NULL)
 		return 1;
-	int len = end - start;
+	int len = 0;
+	for (char *i = start; i != end; i++) {
+		if (*i == '\t') {
+			int to_tab = TABSIZE - (len % TABSIZE);
+			len += to_tab;
+		} else {
+			len++;
+		}
+	}
 	return (len / COLS) + 1;
 }
 
