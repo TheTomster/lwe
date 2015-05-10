@@ -12,6 +12,7 @@
 #include "draw.h"
 #include "yank.h"
 
+#define KEY_ESCAPE 27
 #define C_D 4
 #define C_U 21
 #define C_W 23
@@ -160,7 +161,7 @@ int insertmode(char *t)
 		c = getch();
 		if (c == '\r')
 			c = '\n';
-		if (c == C_D)
+		if (c == C_D || c == KEY_ESCAPE)
 			return 1;
 		if (c == KEY_BACKSPACE || c == 127) {
 			if (t <= getbufptr())
