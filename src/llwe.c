@@ -152,13 +152,13 @@ int insertmode(char *t)
 	mode = "INSERT";
 	int c;
 	for (;;) {
+		if (t > winend())
+			adjust_scroll(LINES / 2);
 		clrscreen();
 		drawtext();
 		drawmodeline(filename, mode);
-		present();
-		if (t > winend())
-			adjust_scroll(LINES / 2);
 		movecursor(t);
+		present();
 		c = getch();
 		if (c == '\r')
 			c = '\n';
