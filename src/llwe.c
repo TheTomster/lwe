@@ -120,27 +120,30 @@ void ruboutword(char **t)
 	*t = dstart;
 }
 
-/* Moves the terminal cursor to point to the given buffer location on screen. */
+/* Moves the terminal cursor to point to the given buffer location on
+ * screen. */
 void movecursor(char *t)
 {
 	assert(inbuf(t));
 	int row = 0;
-	if (t != getbufend())
-		while (skipscreenlines(winstart(), row + 1) <= t)
-			row++;
 	int column = 0;
-	char *i = skipscreenlines(winstart(), row);
-	while (i != t) {
-		assert(*i != '\n');
-		if (*i == '\t')
+	for (char *i = winstart(); i != t; i++) {
+		if (*i == '\n') {
+			row++;
+			column = 0;
+		} else if (*i == '\t') {
+			/* go to the next tabstop.  e.g. if
+			 * column % TABSIZE == 3 then we need to move 5
+			 * spaces. */
 			column += TABSIZE - (column % TABSIZE);
-		else
+		} else {
 			column++;
-		if (column > COLS - 1) {
+		}
+		/* check for wrap to next line */
+		if (column > COLS) {
 			row++;
 			column = 0;
 		}
-		i++;
 	}
 	move(row, column);
 }
