@@ -61,9 +61,11 @@ static bool filetobuf(char *path, int sz)
 	int readsz = fread(buffer, 1, sz, f);
 	if (readsz != sz) {
 		seterr("read");
+		fclose(f);
 		return false;
 	}
 	contentsz += sz;
+	fclose(f);
 	return true;
 }
 
