@@ -374,6 +374,37 @@ enum loopsig reloadcmd(void)
 	return LOOP_SIGCNT;
 }
 
+bool queryuser(char *out, int out_sz, char *prompt)
+{
+	assert(out != NULL && out_sz > 0);
+	assert(prompt != NULL);
+	memset(out, '\0', out_sz);
+	int plen = strlen(prompt);
+	int i = 0;
+	while (i < out_sz) {
+		char msgbuf[COLS];
+		snprintf(msgbuf, COLS, "%s: %.*s", prompt, COLS - plen - 2, out);
+		clrscreen();
+		drawtext();
+		drawmessage(msgbuf);
+		present();
+		char c = getch();
+		if (c == '\r') {
+			return true;
+		} else if (!isgraph(c) && !isspace(c)) {
+			continue;
+		} else {
+			out[i] = c;
+			i++;
+		}
+	}
+	clrscreen();
+	drawtext();
+	drawmessage("Input too long");
+	getch();
+	return false;
+}
+
 enum loopsig jumptolinecmd(void)
 {
 	mode = "JUMP";
@@ -383,14 +414,7 @@ enum loopsig jumptolinecmd(void)
 	drawmodeline(filename, mode);
 	present();
 	char buf[32];
-	memset(buf, '\0', 32);
-	for (int i = 0; i < 32; i++) {
-		char c = getch();
-		if (isdigit(c))
-			buf[i] = c;
-		else
-			break;
-	}
+	queryuser(buf, sizeof(buf), "JUMP");
 	int i = atoi(buf);
 	if (i == 0)
 		return LOOP_SIGCNT;
