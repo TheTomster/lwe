@@ -557,6 +557,7 @@ int cmdloop(void)
 		mode = "COMMAND";
 		clrscreen();
 		drawtext();
+		drawtildas();
 		drawmodeline(filename, mode);
 		present();
 		int c = getch();

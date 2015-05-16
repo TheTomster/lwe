@@ -13,4 +13,3 @@ void geterr(char *str, int sz)
 {
 	snprintf(str, sz, "%s", errbuf);
 }
-

@@ -300,3 +300,22 @@ void drawyanks()
 		}
 	}
 }
+void drawtildas(void)
+{
+        char *start = skipscreenlines(getbufptr(), scroll_line());
+	int r = 0, c = 0;
+        char *end = start;
+	while (end != getbufend() && r < LINES - 1) {
+		c++;
+		if (*end == '\n')
+			c = 0;
+		c %= COLS;
+		if (c == 0)
+			r++;
+		end++;
+	};
+	for( ; r < LINES; ++r ) {
+	        mvaddch(r,0,'~');
+	}
+	move(0,0);
+}
