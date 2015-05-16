@@ -5,4 +5,6 @@ struct bang_output {
 	int sz;
 };
 
-struct bang_output bang(char *cmd, char *input, int input_sz);
+bool bang(
+	struct bang_output *out, struct bang_output *err,
+	char *cmd, char *input, int input_sz);

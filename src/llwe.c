@@ -577,12 +577,19 @@ enum loopsig bangcmd(void)
 	huntrange(&r);
 	if (r.start == NULL || r.end == NULL)
 		return LOOP_SIGCNT;
-	struct bang_output o = bang("tr o a", r.start, r.end - r.start);
-	if (o.buf == NULL)
+	struct bang_output o;
+	struct bang_output e;
+	bool ok = bang(&o, &e, "echo error >&2", r.start, r.end - r.start);
+	if (!ok) {
+		free(o.buf);
+		free(e.buf);
 		return LOOP_SIGCNT;
+	}
 	yank(r.start, r.end);
 	delete(r.start, r.end);
 	bufinsertstr(o.buf, o.buf + o.sz, r.start);
+	free(o.buf);
+	free(e.buf);
 	return LOOP_SIGCNT;
 }
 
