@@ -73,6 +73,7 @@ int linehunt(void)
 	while (!lineselected(lvl, off)) {
 		clrscreen();
 		drawtext();
+		draw_eof();
 		drawlinelbls(lvl, off);
 		drawmodeline(filename, mode);
 		present();
@@ -159,6 +160,7 @@ int insertmode(char *t)
 			adjust_scroll(LINES / 2);
 		clrscreen();
 		drawtext();
+		draw_eof();
 		drawmodeline(filename, mode);
 		movecursor(t);
 		present();
@@ -238,6 +240,7 @@ char *disamb(char c)
 	while (!onlymatch(c, lvl, toskip)) {
 		clrscreen();
 		drawtext();
+		draw_eof();
 		drawdisamb(c, lvl, toskip);
 		drawmodeline(filename, mode);
 		present();
@@ -262,6 +265,7 @@ char *hunt(void)
 		return getbufptr();
 	clrscreen();
 	drawtext();
+	draw_eof();
 	drawmodeline(filename, mode);
 	present();
 	c = getch();
@@ -293,6 +297,7 @@ enum loopsig writecmd(void)
 	if (!bufwrite(filename)) {
 		clrscreen();
 		drawtext();
+		draw_eof();
 		drawmodeline(filename, mode);
 		char messagebuf[256];
 		snprintf(messagebuf, sizeof(messagebuf), "Error -- failed to write to file: %s", filename);
@@ -358,6 +363,7 @@ enum loopsig jumptolinecmd(void)
 	mode = "JUMP";
 	clrscreen();
 	drawtext();
+	draw_eof();
 	drawmodeline(filename, mode);
 	present();
 	char buf[32];
@@ -445,6 +451,7 @@ enum loopsig lineoverlaycmd(void)
 {
 	clrscreen();
 	drawtext();
+	draw_eof();
 	drawmodeline(filename, mode);
 	drawlineoverlay();
 	present();
@@ -557,6 +564,7 @@ int cmdloop(void)
 		mode = "COMMAND";
 		clrscreen();
 		drawtext();
+		draw_eof();
 		drawmodeline(filename, mode);
 		present();
 		int c = getch();

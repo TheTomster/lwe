@@ -300,3 +300,16 @@ void drawyanks()
 		}
 	}
 }
+void draw_eof(void)
+{
+	char *start = skipscreenlines(getbufptr(), scroll_line());
+	int r = 0;
+	while(start != getbufend() && r < LINES - 1) {
+		r += screenlines(start);
+		start = skipscreenlines(start,1);
+	}
+
+	for(; r < LINES - 1; ++r)
+		mvaddch(r,0,'~');
+	move(0,0);
+}

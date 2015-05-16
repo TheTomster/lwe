@@ -25,6 +25,7 @@ void drawlinelbls(int lvl, int off);
 void drawlineoverlay(void);
 void drawmessage(char *msg);
 void drawyanks(void);
+void draw_eof(void);
 
 int skips(int lvl);
 bool onlymatch(char c, int lvl, int toskip);
