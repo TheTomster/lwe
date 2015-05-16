@@ -616,6 +616,10 @@ enum loopsig bangcmd(void)
 	struct bang_output e;
 	ok = bang(&o, &e, cmd, r.start, r.end - r.start);
 	if (!ok) {
+		clrscreen();
+		drawmessage(e.buf);
+		present();
+		getch();
 		free(o.buf);
 		free(e.buf);
 		return LOOP_SIGCNT;
