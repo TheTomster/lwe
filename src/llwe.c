@@ -7,6 +7,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "bang.h"
 #include "buffer.h"
 #include "err.h"
 #include "draw.h"
@@ -16,6 +17,11 @@
 #define C_D 4
 #define C_U 21
 #define C_W 23
+
+struct range {
+	char *start;
+	char *end;
+};
 
 char *filename, *mode;
 
@@ -320,34 +326,44 @@ void orient(char **start, char **end)
 	}
 }
 
+void huntrange(struct range *result)
+{
+	result->start = hunt();
+	if (result->start == NULL) {
+		result->end = NULL;
+		return;
+	}
+	result->end = hunt();
+	if (result->end == NULL) {
+		result->start = NULL;
+		return;
+	}
+	orient(&result->start, &result->end);
+	assert(result->start != NULL && result->end != NULL);
+}
+
 enum loopsig deletecmd(void)
 {
 	mode = "TARGET (DELETE)";
-	char *start = hunt();
-	if (start == NULL)
+	struct range r;
+	huntrange(&r);
+	if (r.start == NULL || r.end == NULL)
 		return LOOP_SIGCNT;
-	char *end = hunt();
-	if (end == NULL)
-		return LOOP_SIGCNT;
-	orient(&start, &end);
-	yank(start, end);
-	delete(start, end);
+	yank(r.start, r.end);
+	delete(r.start, r.end);
 	return LOOP_SIGCNT;
 }
 
 enum loopsig changecmd(void)
 {
 	mode = "TARGET (CHANGE)";
-	char *start = hunt();
-	if (start == NULL)
+	struct range r;
+	huntrange(&r);
+	if (r.start == NULL || r.end == NULL)
 		return LOOP_SIGCNT;
-	char *end = hunt();
-	if (end == NULL)
-		return LOOP_SIGCNT;
-	orient(&start, &end);
-	yank(start, end);
-	delete(start, end);
-	return checksig(insertmode(start));
+	yank(r.start, r.end);
+	delete(r.start, r.end);
+	return checksig(insertmode(r.start));
 }
 
 enum loopsig reloadcmd(void)
@@ -462,13 +478,11 @@ enum loopsig lineoverlaycmd(void)
 enum loopsig yankcmd(void)
 {
 	mode = "TARGET (YANK)";
-	char *start = hunt();
-	if (start == NULL)
+	struct range r;
+	huntrange(&r);
+	if (r.start == NULL || r.end == NULL)
 		return LOOP_SIGCNT;
-	char *end = hunt();
-	if (end == NULL)
-		return LOOP_SIGCNT;
-	yank(start, end);
+	yank(r.start, r.end);
 	return LOOP_SIGCNT;
 }
 
@@ -556,6 +570,22 @@ enum loopsig appendlinecmd(void)
 	return checksig(insertmode(end + 1));
 }
 
+enum loopsig bangcmd(void)
+{
+	mode = "TARGET (SHELL)";
+	struct range r;
+	huntrange(&r);
+	if (r.start == NULL || r.end == NULL)
+		return LOOP_SIGCNT;
+	struct bang_output o = bang("tr o a", r.start, r.end - r.start);
+	if (o.buf == NULL)
+		return LOOP_SIGCNT;
+	yank(r.start, r.end);
+	delete(r.start, r.end);
+	bufinsertstr(o.buf, o.buf + o.sz, r.start);
+	return LOOP_SIGCNT;
+}
+
 /* The list of all commands.  Unused entries will be NULL.  A character
  * can be used as the index into this array to look up the appropriate
  * command. */
@@ -584,7 +614,8 @@ command_fn cmdtbl[512] = {
 	['y'] = yankcmd,
 	['Y'] = yanklinescmd,
 	['p'] = putcmd,
-	['o'] = preputcmd
+	['o'] = preputcmd,
+	['1'] = bangcmd
 };
 
 int cmdloop(void)
