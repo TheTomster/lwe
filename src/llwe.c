@@ -374,6 +374,10 @@ enum loopsig reloadcmd(void)
 	return LOOP_SIGCNT;
 }
 
+/* Queries the user for a string.  Returns true on success, false if there
+ * is a problem.  `out` is the buffer to store the user's response in.
+ * `out_sz` is how much space is allocated for the user's response.
+ * `prompt` is displayed to the user. */
 bool queryuser(char *out, int out_sz, char *prompt)
 {
 	assert(out != NULL && out_sz > 0);
@@ -601,9 +605,16 @@ enum loopsig bangcmd(void)
 	huntrange(&r);
 	if (r.start == NULL || r.end == NULL)
 		return LOOP_SIGCNT;
+	if (r.end != getbufend())
+		r.end++;
+	char cmd[8192];
+	bool ok = queryuser(cmd, sizeof(cmd), "COMMAND");
+	if (!ok) {
+		return LOOP_SIGCNT;
+	}
 	struct bang_output o;
 	struct bang_output e;
-	bool ok = bang(&o, &e, "echo error >&2", r.start, r.end - r.start);
+	ok = bang(&o, &e, cmd, r.start, r.end - r.start);
 	if (!ok) {
 		free(o.buf);
 		free(e.buf);
