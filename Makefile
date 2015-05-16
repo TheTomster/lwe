@@ -1,3 +1,4 @@
+CFLAGS = -O0 -g -Wall -Wextra -pedantic -Werror -std=c11 -pipe
 LDLIBS = -lcurses
 
 OBJS = src/llwe.o src/err.o src/buffer.o src/draw.o src/yank.o

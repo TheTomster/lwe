@@ -49,9 +49,3 @@ the letters that pop up until the targeting is done.
 Drawbacks
 
 I have no idea how macros / repetition could ever work with this.
-
-
-Building
-
-- `source env.sh` to get the CFLAGS environment variable set
-- run `make`
