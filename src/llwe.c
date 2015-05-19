@@ -64,7 +64,7 @@ int getoffset(int lvl, int off)
  * number (where the top of the screen is 0) that the user has selected.
  * This requires multiple layers of disambiguation of we have more than
  * 26 lines on screen. */
-int linehunt(void)
+int huntline(void)
 {
 	int lvl = 0;
 	int off = 0;
@@ -400,15 +400,15 @@ struct linerange {
 };
 
 /* Similar idea to hunt, but for a range of lines.  Pretty much just uses
- * linehunt to get the start / end of the range.  Also guarantees the start
+ * huntline to get the start / end of the range.  Also guarantees the start
  * and end will be oriented properly, and returns NULL for both if there is a
  * problem with either. */
 struct linerange huntlinerange(void)
 {
-	int startoffset = linehunt();
+	int startoffset = huntline();
 	if (startoffset == -1)
 		goto retnull;
-	int endoffset = linehunt();
+	int endoffset = huntline();
 	if (endoffset == -1)
 		goto retnull;
 	orienti(&startoffset, &endoffset);
@@ -532,7 +532,7 @@ enum loopsig putcmd(void)
 enum loopsig insertlinecmd(void)
 {
         mode = "TARGET (INSERT)";
-	int lineno = linehunt();
+	int lineno = huntline();
 	if (lineno == -1)
 		return LOOP_SIGCNT;
 	char *start = screenline(lineno);
@@ -545,7 +545,7 @@ enum loopsig insertlinecmd(void)
 enum loopsig appendlinecmd(void)
 {
         mode = "TARGET (APPEND)";
-	int lineno = linehunt();
+	int lineno = huntline();
 	if (lineno == -1)
 		return LOOP_SIGCNT;
 	char *start = screenline(lineno);
