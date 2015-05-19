@@ -12,7 +12,7 @@ enum pipe_err { PIPE_OK, PIPE_ERR };
 
 enum write_err { WRITE_OK, WRITE_ERR };
 
-#define NULL_OUTPUT ((struct bang_output) {0})
+#define NULL_OUTPUT ((struct bang_output) { .buf = NULL, .sz = 0 })
 
 static enum pipe_err openpipes(int in[2], int out[2], int err[2]);
 static void closepipes(int in[2], int out[2], int err[2]);
