@@ -281,11 +281,6 @@ enum loopsig insertcmd(void)
 	return checksig(insertmode(start));
 }
 
-enum loopsig insertlinecmd(void)
-{
-  return insertcmd();
-}
-
 enum loopsig appendcmd(void)
 {
 	mode = "TARGET (APPEND)";
@@ -295,11 +290,6 @@ enum loopsig appendcmd(void)
 	if (start != getbufend())
 		start++;
 	return checksig(insertmode(start));
-}
-
-enum loopsig appendlinecmd(void)
-{
-  return appendcmd();
 }
 
 enum loopsig writecmd(void)
@@ -537,6 +527,33 @@ enum loopsig putcmd(void)
 	if (y.start == NULL || y.end == NULL)
 		return LOOP_SIGCNT;
 	return checksig(bufinsertstr(y.start, y.end, t));
+}
+
+enum loopsig insertlinecmd(void)
+{
+        mode = "TARGET (INSERT)";
+	int lineno = linehunt();
+	if (lineno == -1)
+		return LOOP_SIGCNT;
+	char *start = screenline(lineno);
+	if(start == NULL)
+	        return LOOP_SIGCNT;
+	bufinsert('\n',start - 1);
+	return checksig(insertmode(start));
+}
+
+enum loopsig appendlinecmd(void)
+{
+        mode = "TARGET (APPEND)";
+	int lineno = linehunt();
+	if (lineno == -1)
+		return LOOP_SIGCNT;
+	char *start = screenline(lineno);
+	if(start == NULL)
+	        return LOOP_SIGCNT;
+	char *end = endofline(start);
+	bufinsert('\n', end );
+	return checksig(insertmode(end + 1));
 }
 
 /* The list of all commands.  Unused entries will be NULL.  A character
