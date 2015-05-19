@@ -281,6 +281,11 @@ enum loopsig insertcmd(void)
 	return checksig(insertmode(start));
 }
 
+enum loopsig insertlinecmd(void)
+{
+  return insertcmd();
+}
+
 enum loopsig appendcmd(void)
 {
 	mode = "TARGET (APPEND)";
@@ -290,6 +295,11 @@ enum loopsig appendcmd(void)
 	if (start != getbufend())
 		start++;
 	return checksig(insertmode(start));
+}
+
+enum loopsig appendlinecmd(void)
+{
+  return appendcmd();
 }
 
 enum loopsig writecmd(void)
@@ -543,7 +553,9 @@ command_fn cmdtbl[512] = {
 	['k'] = scrollup,
 	['q'] = quitcmd,
 	['i'] = insertcmd,
+	['I'] = insertlinecmd,
 	['a'] = appendcmd,
+	['A'] = appendlinecmd,
 	['w'] = writecmd,
 	['d'] = deletecmd,
 	['c'] = changecmd,
