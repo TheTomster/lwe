@@ -604,23 +604,18 @@ enum loopsig appendlinecmd(void)
 	return checksig(insertmode(end + 1));
 }
 
-enum loopsig bangcmd(void)
+bool ranged_bang(char *start, char *end)
 {
-	mode = "TARGET (SHELL)";
-	struct range r;
-	huntrange(&r);
-	if (r.start == NULL || r.end == NULL)
-		return LOOP_SIGCNT;
-	if (r.end != getbufend())
-		r.end++;
+	if (end != getbufend())
+		end++;
 	char cmd[8192];
 	bool ok = queryuser(cmd, sizeof(cmd), "COMMAND");
 	if (!ok) {
-		return LOOP_SIGCNT;
+		return true;
 	}
 	struct bang_output o;
 	struct bang_output e;
-	ok = bang(&o, &e, cmd, r.start, r.end - r.start);
+	ok = bang(&o, &e, cmd, start, end - start);
 	if (!ok) {
 		clrscreen();
 		drawmessage(e.buf);
@@ -628,14 +623,33 @@ enum loopsig bangcmd(void)
 		getch();
 		free(o.buf);
 		free(e.buf);
-		return LOOP_SIGCNT;
+		return true;
 	}
-	yank(r.start, r.end);
-	delete(r.start, r.end);
-	bufinsertstr(o.buf, o.buf + o.sz, r.start);
+	yank_store(start, end);
+	bufdelete(start, end);
+	bufinsertstr(o.buf, o.buf + o.sz, start);
 	free(o.buf);
 	free(e.buf);
-	return LOOP_SIGCNT;
+	return true;
+}
+
+enum loopsig bangcmd(void)
+{
+	mode = "TARGET (SHELL)";
+	struct range r;
+	huntrange(&r);
+	if (r.start == NULL || r.end == NULL)
+		return LOOP_SIGCNT;
+	return checksig(ranged_bang(r.start, r.end));
+}
+
+enum loopsig banglinescmd(void)
+{
+	mode = "TARGET (SHELL)";
+	struct linerange r = huntlinerange();
+	if (r.start == NULL || r.end == NULL)
+		return LOOP_SIGCNT;
+	return checksig(ranged_bang(r.start, r.end));
 }
 
 /* The list of all commands.  Unused entries will be NULL.  A character
@@ -667,7 +681,8 @@ command_fn cmdtbl[512] = {
 	['Y'] = yanklinescmd,
 	['p'] = putcmd,
 	['o'] = preputcmd,
-	['1'] = bangcmd
+	['1'] = bangcmd,
+	['!'] = banglinescmd,
 };
 
 int cmdloop(void)
