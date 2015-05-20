@@ -392,9 +392,12 @@ bool queryuser(char *out, int out_sz, char *prompt)
 		drawtext();
 		drawmessage(msgbuf);
 		present();
-		char c = getch();
+		int c = getch();
 		if (c == '\r') {
 			return true;
+		} else if (c == KEY_BACKSPACE || c == 127) {
+			i--;
+			out[i] = '\0';
 		} else if (!isgraph(c) && !isspace(c)) {
 			continue;
 		} else {
