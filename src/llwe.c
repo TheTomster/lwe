@@ -446,6 +446,19 @@ struct linerange {
 	char *end;
 };
 
+#define NULL_LINERANGE ((struct linerange) {.start = NULL, .end = NULL})
+
+/* Skips lines in the buffer.  This looks at buffer lines, not screen lines. */
+char *bufline(char *start, int lines)
+{
+	for (int i = 0; i < lines; i++) {
+		start = endofline(start);
+		if (start != getbufend())
+			start++;
+	}
+	return start;
+}
+
 /* Similar idea to hunt, but for a range of lines.  Pretty much just uses
  * huntline to get the start / end of the range.  Also guarantees the start
  * and end will be oriented properly, and returns NULL for both if there is a
@@ -454,21 +467,19 @@ struct linerange huntlinerange(void)
 {
 	int startoffset = huntline();
 	if (startoffset == -1)
-		goto retnull;
+		return NULL_LINERANGE;
 	int endoffset = huntline();
 	if (endoffset == -1)
-		goto retnull;
+		return NULL_LINERANGE;
 	orienti(&startoffset, &endoffset);
-	char *start = screenline(startoffset);
+	char *start = bufline(winstart(), startoffset);
 	if (start == NULL)
-		goto retnull;
-	char *lstart = screenline(endoffset);
+		return NULL_LINERANGE;
+	char *lstart = bufline(winstart(), endoffset);
 	if (lstart == NULL)
-		goto retnull;
+		return NULL_LINERANGE;
 	char *end = endofline(lstart);
 	return (struct linerange) {.start = start, .end = end};
-retnull:
-	return (struct linerange) {.start = NULL, .end = NULL};
 }
 
 enum loopsig deletelinescmd(void)
@@ -580,7 +591,7 @@ enum loopsig insertlinecmd(void)
 	int lineno = huntline();
 	if (lineno == -1)
 		return LOOP_SIGCNT;
-	char *start = screenline(lineno);
+	char *start = bufline(winstart(), lineno);
 	if(start == NULL)
 	        return LOOP_SIGCNT;
 	char *insertpos = start;
@@ -596,7 +607,7 @@ enum loopsig appendlinecmd(void)
 	int lineno = huntline();
 	if (lineno == -1)
 		return LOOP_SIGCNT;
-	char *start = screenline(lineno);
+	char *start = bufline(winstart(), lineno);
 	if(start == NULL)
 	        return LOOP_SIGCNT;
 	char *end = endofline(start);
