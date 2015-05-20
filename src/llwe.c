@@ -583,7 +583,10 @@ enum loopsig insertlinecmd(void)
 	char *start = screenline(lineno);
 	if(start == NULL)
 	        return LOOP_SIGCNT;
-	bufinsert('\n',start - 1);
+	char *insertpos = start;
+	if (insertpos != getbufptr())
+		insertpos--;
+	bufinsert('\n', insertpos);
 	return checksig(insertmode(start));
 }
 
