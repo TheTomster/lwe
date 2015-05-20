@@ -7,6 +7,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "bang.h"
 #include "buffer.h"
 #include "err.h"
 #include "draw.h"
@@ -16,6 +17,11 @@
 #define C_D 4
 #define C_U 21
 #define C_W 23
+
+struct range {
+	char *start;
+	char *end;
+};
 
 char *filename, *mode;
 
@@ -320,34 +326,44 @@ void orient(char **start, char **end)
 	}
 }
 
+void huntrange(struct range *result)
+{
+	result->start = hunt();
+	if (result->start == NULL) {
+		result->end = NULL;
+		return;
+	}
+	result->end = hunt();
+	if (result->end == NULL) {
+		result->start = NULL;
+		return;
+	}
+	orient(&result->start, &result->end);
+	assert(result->start != NULL && result->end != NULL);
+}
+
 enum loopsig deletecmd(void)
 {
 	mode = "TARGET (DELETE)";
-	char *start = hunt();
-	if (start == NULL)
+	struct range r;
+	huntrange(&r);
+	if (r.start == NULL || r.end == NULL)
 		return LOOP_SIGCNT;
-	char *end = hunt();
-	if (end == NULL)
-		return LOOP_SIGCNT;
-	orient(&start, &end);
-	yank(start, end);
-	delete(start, end);
+	yank(r.start, r.end);
+	delete(r.start, r.end);
 	return LOOP_SIGCNT;
 }
 
 enum loopsig changecmd(void)
 {
 	mode = "TARGET (CHANGE)";
-	char *start = hunt();
-	if (start == NULL)
+	struct range r;
+	huntrange(&r);
+	if (r.start == NULL || r.end == NULL)
 		return LOOP_SIGCNT;
-	char *end = hunt();
-	if (end == NULL)
-		return LOOP_SIGCNT;
-	orient(&start, &end);
-	yank(start, end);
-	delete(start, end);
-	return checksig(insertmode(start));
+	yank(r.start, r.end);
+	delete(r.start, r.end);
+	return checksig(insertmode(r.start));
 }
 
 enum loopsig reloadcmd(void)
@@ -356,6 +372,44 @@ enum loopsig reloadcmd(void)
 	if (!ok)
 		return LOOP_SIGERR;
 	return LOOP_SIGCNT;
+}
+
+/* Queries the user for a string.  Returns true on success, false if there
+ * is a problem.  `out` is the buffer to store the user's response in.
+ * `out_sz` is how much space is allocated for the user's response.
+ * `prompt` is displayed to the user. */
+bool queryuser(char *out, int out_sz, char *prompt)
+{
+	assert(out != NULL && out_sz > 0);
+	assert(prompt != NULL);
+	memset(out, '\0', out_sz);
+	int plen = strlen(prompt);
+	int i = 0;
+	while (i < out_sz) {
+		char msgbuf[COLS];
+		snprintf(msgbuf, COLS, "%s: %.*s", prompt, COLS - plen - 2, out);
+		clrscreen();
+		drawtext();
+		drawmessage(msgbuf);
+		present();
+		int c = getch();
+		if (c == '\r') {
+			return true;
+		} else if (c == KEY_BACKSPACE || c == 127) {
+			i--;
+			out[i] = '\0';
+		} else if (!isgraph(c) && !isspace(c)) {
+			continue;
+		} else {
+			out[i] = c;
+			i++;
+		}
+	}
+	clrscreen();
+	drawtext();
+	drawmessage("Input too long");
+	getch();
+	return false;
 }
 
 enum loopsig jumptolinecmd(void)
@@ -367,14 +421,7 @@ enum loopsig jumptolinecmd(void)
 	drawmodeline(filename, mode);
 	present();
 	char buf[32];
-	memset(buf, '\0', 32);
-	for (int i = 0; i < 32; i++) {
-		char c = getch();
-		if (isdigit(c))
-			buf[i] = c;
-		else
-			break;
-	}
+	queryuser(buf, sizeof(buf), "JUMP");
 	int i = atoi(buf);
 	if (i == 0)
 		return LOOP_SIGCNT;
@@ -462,13 +509,11 @@ enum loopsig lineoverlaycmd(void)
 enum loopsig yankcmd(void)
 {
 	mode = "TARGET (YANK)";
-	char *start = hunt();
-	if (start == NULL)
+	struct range r;
+	huntrange(&r);
+	if (r.start == NULL || r.end == NULL)
 		return LOOP_SIGCNT;
-	char *end = hunt();
-	if (end == NULL)
-		return LOOP_SIGCNT;
-	yank(start, end);
+	yank(r.start, r.end);
 	return LOOP_SIGCNT;
 }
 
@@ -556,6 +601,40 @@ enum loopsig appendlinecmd(void)
 	return checksig(insertmode(end + 1));
 }
 
+enum loopsig bangcmd(void)
+{
+	mode = "TARGET (SHELL)";
+	struct range r;
+	huntrange(&r);
+	if (r.start == NULL || r.end == NULL)
+		return LOOP_SIGCNT;
+	if (r.end != getbufend())
+		r.end++;
+	char cmd[8192];
+	bool ok = queryuser(cmd, sizeof(cmd), "COMMAND");
+	if (!ok) {
+		return LOOP_SIGCNT;
+	}
+	struct bang_output o;
+	struct bang_output e;
+	ok = bang(&o, &e, cmd, r.start, r.end - r.start);
+	if (!ok) {
+		clrscreen();
+		drawmessage(e.buf);
+		present();
+		getch();
+		free(o.buf);
+		free(e.buf);
+		return LOOP_SIGCNT;
+	}
+	yank(r.start, r.end);
+	delete(r.start, r.end);
+	bufinsertstr(o.buf, o.buf + o.sz, r.start);
+	free(o.buf);
+	free(e.buf);
+	return LOOP_SIGCNT;
+}
+
 /* The list of all commands.  Unused entries will be NULL.  A character
  * can be used as the index into this array to look up the appropriate
  * command. */
@@ -584,7 +663,8 @@ command_fn cmdtbl[512] = {
 	['y'] = yankcmd,
 	['Y'] = yanklinescmd,
 	['p'] = putcmd,
-	['o'] = preputcmd
+	['o'] = preputcmd,
+	['1'] = bangcmd
 };
 
 int cmdloop(void)
