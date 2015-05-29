@@ -142,6 +142,7 @@ char *getbufend(void)
 char *endofline(char *p)
 {
 	assert(inbuf(p));
-	for (; p != getbufend() && *p != '\n'; p++);
-	return p;
+	char *end = memchr(p, '\n', getbufend() - p);
+	assert(end == NULL || inbuf(end));
+	return end == NULL ? getbufend() : end;
 }

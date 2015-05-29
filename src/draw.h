@@ -32,3 +32,5 @@ bool onlymatch(char c, int lvl, int toskip);
 
 int count(char c);
 int countwithin(char *start, char *end, char c);
+
+void refresh_bounds(void);

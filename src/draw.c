@@ -4,6 +4,7 @@
 #include <ctype.h>
 #include <curses.h>
 #include <stdbool.h>
+#include <string.h>
 
 #include "draw.h"
 #include "buffer.h"
@@ -19,8 +20,7 @@ struct {
 
 static void pc(char c);
 static void ptarg(int count);
-static void refresh_bounds(void);
-static void nextline(char **p);
+static char *nextline(char *p);
 static void advcursor(char c);
 
 void present(void)
@@ -45,7 +45,8 @@ void set_scroll(int n)
 		scroll_linum = 0;
 	scroll_ptr = getbufstart();
         for (int i = 0; scroll_ptr != getbufend() && i < n - 1; i++)
-		nextline(&scroll_ptr);
+		scroll_ptr = nextline(scroll_ptr);
+	refresh_bounds();
 }
 
 void adjust_scroll(int delta)
@@ -55,29 +56,22 @@ void adjust_scroll(int delta)
 
 char *winstart()
 {
-	refresh_bounds();
 	return bounds.start;
 }
 
 char *winend()
 {
-	refresh_bounds();
 	return bounds.end;
 }
 
-static void refresh_bounds()
+void refresh_bounds()
 {
 	bounds.start = scroll_ptr;
-	int r = 0, c = 0;
+	int r = 0;
 	bounds.end = bounds.start;
 	while (bounds.end != getbufend() && r < LINES - 1) {
-		c++;
-		if (*bounds.end == '\n')
-			c = 0;
-		c %= COLS;
-		if (c == 0)
-			r++;
-		bounds.end++;
+		r += screenlines(bounds.end);
+		bounds.end = nextline(bounds.end);
 	}
 	assert(inbuf(bounds.start) && inbuf(bounds.end));
 }
@@ -205,19 +199,20 @@ void drawlinelbls(int lvl, int off)
 			toskip--;
 		}
 		line += screenlines(p);
-		nextline(&p);
+		p = nextline(p);
 	}
 }
 
-static void nextline(char **p)
+static char *nextline(char *p)
 {
-	assert(inbuf(*p));
-	for (;*p < getbufend(); (*p)++)
-		if (**p == '\n') {
-			(*p)++;
-			break;
-		}
-	assert(inbuf(*p));
+	assert(inbuf(p));
+        char *nl = memchr(p, '\n', getbufend() - p);
+	if (nl == NULL)
+		return getbufend();
+	if (nl != getbufend())
+		nl++;
+	assert(inbuf(nl));
+	return nl;
 }
 
 int skips(int lvl)

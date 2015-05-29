@@ -105,6 +105,7 @@ void delete(char *start, char *end)
 	if (end != getbufend())
 		end++;
 	bufdelete(start, end);
+	refresh_bounds();
 }
 
 /* Deletes a word.  `t` is a pointer to a buffer pointer.  The pointer will be
@@ -162,6 +163,7 @@ int insertmode(char *t)
 	mode = "INSERT";
 	int c;
 	for (;;) {
+		refresh_bounds();
 		if (t > winend())
 			adjust_scroll(LINES / 2);
 		clrscreen();
@@ -568,7 +570,11 @@ enum loopsig preputcmd(void)
 	struct yankstr y = yankhunt();
 	if (y.start == NULL || y.end == NULL)
 		return LOOP_SIGCNT;
-	return checksig(bufinsertstr(y.start, y.end, t));
+	bool ok = bufinsertstr(y.start, y.end, t);
+	if (!ok)
+		return LOOP_SIGERR;
+	refresh_bounds();
+	return LOOP_SIGCNT;
 }
 
 enum loopsig putcmd(void)
@@ -582,7 +588,11 @@ enum loopsig putcmd(void)
 	struct yankstr y = yankhunt();
 	if (y.start == NULL || y.end == NULL)
 		return LOOP_SIGCNT;
-	return checksig(bufinsertstr(y.start, y.end, t));
+	bool ok = bufinsertstr(y.start, y.end, t);
+	if (!ok)
+		return LOOP_SIGERR;
+	refresh_bounds();
+	return LOOP_SIGCNT;
 }
 
 enum loopsig insertlinecmd(void)
@@ -641,6 +651,7 @@ bool ranged_bang(char *start, char *end)
 	bufinsertstr(o.buf, o.buf + o.sz, start);
 	free(o.buf);
 	free(e.buf);
+	refresh_bounds();
 	return true;
 }
 
