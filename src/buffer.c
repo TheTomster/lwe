@@ -129,7 +129,7 @@ void bufdelete(char *start, char *end)
 	contentsz -= szdeleted;
 }
 
-char *getbufptr(void)
+char *getbufstart(void)
 {
 	return buffer;
 }

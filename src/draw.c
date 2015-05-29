@@ -9,7 +9,8 @@
 #include "buffer.h"
 #include "yank.h"
 
-int lwe_scroll;
+char *scroll_ptr;
+int scroll_linum;
 
 struct {
 	char *start;
@@ -34,14 +35,17 @@ void clrscreen(void)
 
 int scroll_line()
 {
-	return lwe_scroll;
+	return scroll_linum;
 }
 
 void set_scroll(int n)
 {
-	lwe_scroll = n;
-	if (lwe_scroll < 0)
-		lwe_scroll = 0;
+	scroll_linum = n;
+	if (scroll_linum < 0)
+		scroll_linum = 0;
+	scroll_ptr = getbufstart();
+        for (int i = 0; scroll_ptr != getbufend() && i < n - 1; i++)
+		nextline(&scroll_ptr);
 }
 
 void adjust_scroll(int delta)
@@ -63,7 +67,7 @@ char *winend()
 
 static void refresh_bounds()
 {
-	bounds.start = skipscreenlines(getbufptr(), scroll_line());
+	bounds.start = scroll_ptr;
 	int r = 0, c = 0;
 	bounds.end = bounds.start;
 	while (bounds.end != getbufend() && r < LINES - 1) {
@@ -302,7 +306,7 @@ void drawyanks()
 }
 void draw_eof(void)
 {
-	char *start = skipscreenlines(getbufptr(), scroll_line());
+	char *start = skipscreenlines(getbufstart(), scroll_line());
 	int r = 0;
 	while(start != getbufend() && r < LINES - 1) {
 		r += screenlines(start);

@@ -25,7 +25,7 @@ struct range {
 
 char *filename, *mode;
 
-#define bufempty() (getbufptr() == getbufend())
+#define bufempty() (getbufstart() == getbufend())
 #define screenline(n) (skipscreenlines(winstart(), n))
 
 /* Finds the nth occurance of character c within the window.  Returns a
@@ -116,12 +116,12 @@ void ruboutword(char **t)
 	// remove the letter after our last entered character in insert mode
 	char *dend = *t;
 	char *dstart = dend;
-	while (isspace(*dstart) && (dstart > getbufptr()))
+	while (isspace(*dstart) && (dstart > getbufstart()))
 		dstart--;
-	while (!isspace(*dstart) && (dstart > getbufptr()))
+	while (!isspace(*dstart) && (dstart > getbufstart()))
 		dstart--;
 	// Preserve space before cursor when we can, looks better
-	if (dstart != getbufptr() && ((dstart + 1) < dend))
+	if (dstart != getbufstart() && ((dstart + 1) < dend))
 		dstart++;
 	delete(dstart, dend);
 	*t = dstart;
@@ -176,14 +176,14 @@ int insertmode(char *t)
 		if (c == C_D || c == KEY_ESCAPE)
 			return 1;
 		if (c == KEY_BACKSPACE || c == 127) {
-			if (t <= getbufptr())
+			if (t <= getbufstart())
 				continue;
 			t--;
 			bufdelete(t, t + 1);
 			continue;
 		}
 		if (c == C_W) {
-			if (t <= getbufptr())
+			if (t <= getbufstart())
 				continue;
 			t--;
 			ruboutword(&t);
@@ -268,7 +268,7 @@ char *hunt(void)
 {
 	char c;
 	if (bufempty())
-		return getbufptr();
+		return getbufstart();
 	clrscreen();
 	drawtext();
 	draw_eof();
@@ -595,7 +595,7 @@ enum loopsig insertlinecmd(void)
 	if(start == NULL)
 	        return LOOP_SIGCNT;
 	char *insertpos = start;
-	if (insertpos != getbufptr())
+	if (insertpos != getbufstart())
 		insertpos--;
 	bufinsert('\n', insertpos);
 	return checksig(insertmode(start));
@@ -698,6 +698,7 @@ command_fn cmdtbl[512] = {
 
 int cmdloop(void)
 {
+	set_scroll(0);
 	for (;;) {
 		mode = "COMMAND";
 		clrscreen();
