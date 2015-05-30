@@ -373,6 +373,7 @@ enum loopsig reloadcmd(void)
 	bool ok = bufread(filename);
 	if (!ok)
 		return LOOP_SIGERR;
+	refresh_bounds();
 	return LOOP_SIGCNT;
 }
 
