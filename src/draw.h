@@ -1,5 +1,7 @@
 /* (C) 2015 Tom Wright. */
 
+bool show_whitespace;
+
 void initcurses(void);
 void clrscreen(void);
 void present(void);

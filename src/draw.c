@@ -10,8 +10,10 @@
 #include "buffer.h"
 #include "yank.h"
 
-char *scroll_ptr;
-int scroll_linum;
+bool show_whitespace;
+
+static char *scroll_ptr;
+static int scroll_linum;
 
 struct {
 	char *start;
@@ -109,9 +111,25 @@ static void pc(char c)
 {
 	if (c == '\r')
 		c = '?';
-	if (!isgraph(c) && !isspace(c))
+	else if (!isgraph(c) && !isspace(c))
 		c = '?';
-	addch(c);
+	if (show_whitespace && c == ' ') {
+		attron(A_DIM);
+		addch('.');
+		attroff(A_DIM);
+	} else if (show_whitespace && c == '\n') {
+		attron(A_DIM);
+		addch('$');
+		addch('\n');
+		attroff(A_DIM);
+	} else if (show_whitespace && c == '\t') {
+		attron(A_DIM);
+		for (int i = 0; i < TABSIZE; i++)
+			addch('-');
+		attroff(A_DIM);
+	} else {
+		addch(c);
+	}
 }
 
 void drawmodeline(char *filename, char *mode)

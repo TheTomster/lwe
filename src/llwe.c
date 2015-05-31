@@ -675,6 +675,12 @@ enum loopsig banglinescmd(void)
 	return checksig(ranged_bang(r.start, r.end));
 }
 
+enum loopsig togglewhitespacecmd(void)
+{
+	show_whitespace = show_whitespace ^ 1;
+	return LOOP_SIGCNT;
+}
+
 /* The list of all commands.  Unused entries will be NULL.  A character
  * can be used as the index into this array to look up the appropriate
  * command. */
@@ -706,6 +712,7 @@ command_fn cmdtbl[512] = {
 	['o'] = preputcmd,
 	['1'] = bangcmd,
 	['!'] = banglinescmd,
+	['s'] = togglewhitespacecmd,
 };
 
 int cmdloop(void)
