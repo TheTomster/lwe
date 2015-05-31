@@ -598,13 +598,13 @@ enum loopsig putcmd(void)
 
 enum loopsig insertlinecmd(void)
 {
-        mode = "TARGET (INSERT)";
+	mode = "TARGET (INSERT)";
 	int lineno = huntline();
 	if (lineno == -1)
 		return LOOP_SIGCNT;
 	char *start = bufline(winstart(), lineno);
 	if(start == NULL)
-	        return LOOP_SIGCNT;
+		return LOOP_SIGCNT;
 	char *insertpos = start;
 	if (insertpos != getbufstart())
 		insertpos--;
@@ -614,13 +614,13 @@ enum loopsig insertlinecmd(void)
 
 enum loopsig appendlinecmd(void)
 {
-        mode = "TARGET (APPEND)";
+	mode = "TARGET (APPEND)";
 	int lineno = huntline();
 	if (lineno == -1)
 		return LOOP_SIGCNT;
 	char *start = bufline(winstart(), lineno);
 	if(start == NULL)
-	        return LOOP_SIGCNT;
+		return LOOP_SIGCNT;
 	char *end = endofline(start);
 	bufinsert('\n', end );
 	return checksig(insertmode(end + 1));
