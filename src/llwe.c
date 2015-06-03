@@ -32,16 +32,21 @@ char *filename, *mode;
  * buffer pointer. */
 char *find(char c, int n)
 {
-	char *i;
-	for (i = winstart(); i < winend(); i++) {
-		if (*i == c) {
-			if (n <= 0)
-				return i;
-			else
-				n--;
-		}
+	for (char *i = winstart(); i < winend(); i++) {
+		if (*i != c) continue;
+		if (n <= 0) return i;
+		n--;
 	}
-	return 0;
+	return NULL;
+}
+
+/* Takes a level, offset, and an index.  Finds the match at that index
+ * for that level of disambiguation.  The index would correspond to the
+ * key that the user pressed... 'c' => 2, 'a' => 0, for example. */
+int disambget(int lvl, int off, int n)
+{
+	int delta = (skips(lvl) + 1) * n;
+	return off + delta;
 }
 
 /* Returns true if there is only one line on screen that matches the
@@ -50,7 +55,8 @@ char *find(char c, int n)
  * when to stop. */
 bool lineselected(int lvl, int off)
 {
-	return off + skips(lvl) > LINES;
+	/* Checks if the 2nd match would be off screen. */
+	return disambget(lvl, off, 1) > LINES;
 }
 
 /* Given a disamb level and offset (from previous layers of disamb),
@@ -62,8 +68,7 @@ int getoffset(int lvl, int off)
 	int i = c - 'a';
 	if (i < 0 || i >= 26)
 		return -1;
-	int delta = (skips(lvl) + 1) * i;
-	return off + delta;
+	return disambget(lvl, off, i);
 }
 
 /* Allow the user to select any line on the screen.  Returns the line
@@ -108,20 +113,21 @@ void delete(char *start, char *end)
 	refresh_bounds();
 }
 
-/* Deletes a word.  `t` is a pointer to a buffer pointer.  The pointer will be
- * moved back to before the previous word, and delete will be called to remove
- * the word from the buffer. */
+/* Deletes a word.  `t` is a pointer to a buffer pointer.  The pointer will
+ * be moved back to before the previous word, and delete will be called to
+ * remove the word from the buffer. */
 void ruboutword(char **t)
 {
-	// Don't delete letter that our cursor is on otherwise we would
-	// remove the letter after our last entered character in insert mode
+	/* Don't delete letter that our cursor is on otherwise we
+	 * would remove the letter after our last entered character
+	 * in insert mode. */
 	char *dend = *t;
 	char *dstart = dend;
 	while (isspace(*dstart) && (dstart > getbufstart()))
 		dstart--;
 	while (!isspace(*dstart) && (dstart > getbufstart()))
 		dstart--;
-	// Preserve space before cursor when we can, looks better
+	/* Preserve space before cursor when we can, it looks better. */
 	if (dstart != getbufstart() && ((dstart + 1) < dend))
 		dstart++;
 	delete(dstart, dend);
@@ -244,22 +250,20 @@ enum loopsig quitcmd(void)
 char *disamb(char c)
 {
 	int lvl = 0;
-	int toskip = 0;
-	while (!onlymatch(c, lvl, toskip)) {
+	int off = 0;
+	while (!onlymatch(c, lvl, off)) {
 		clrscreen();
 		drawtext();
 		draw_eof();
-		drawdisamb(c, lvl, toskip);
+		drawdisamb(c, lvl, off);
 		drawmodeline(filename, mode);
 		present();
-		char input = getch();
-		int i = input - 'a';
-		if (i < 0 || i >= 26)
+		off = getoffset(lvl, off);
+		if (off < 0)
 			return NULL;
-		toskip += i * (skips(lvl) + 1);
 		lvl++;
 	}
-	return find(c, toskip);
+	return find(c, off);
 }
 
 /* Starts off the process of choosing where an action should occur.  For an
