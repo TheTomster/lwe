@@ -134,34 +134,6 @@ void ruboutword(char **t)
 	*t = dstart;
 }
 
-/* Moves the terminal cursor to point to the given buffer location on
- * screen. */
-void movecursor(char *t)
-{
-	assert(inbuf(t));
-	int row = 0;
-	int column = 0;
-	for (char *i = winstart(); i != t; i++) {
-		if (*i == '\n') {
-			row++;
-			column = 0;
-		} else if (*i == '\t') {
-			/* go to the next tabstop.  e.g. if
-			 * column % TABSIZE == 3 then we need to move 5
-			 * spaces. */
-			column += TABSIZE - (column % TABSIZE);
-		} else {
-			column++;
-		}
-		/* check for wrap to next line */
-		if (column > COLS) {
-			row++;
-			column = 0;
-		}
-	}
-	move(row, column);
-}
-
 /* Reads user input and updates the buffer / screen while the user is
  * inserting text. */
 int insertmode(char *t)

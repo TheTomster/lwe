@@ -36,3 +36,5 @@ int count(char c);
 int countwithin(char *start, char *end, char c);
 
 void refresh_bounds(void);
+
+void movecursor(char *p);

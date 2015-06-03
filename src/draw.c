@@ -317,6 +317,7 @@ void drawyanks()
 		}
 	}
 }
+
 void draw_eof(void)
 {
 	char *start = skipscreenlines(getbufstart(), scroll_line());
@@ -329,4 +330,12 @@ void draw_eof(void)
 	for(; r < LINES - 1; ++r)
 		mvaddch(r,0,'~');
 	move(0,0);
+}
+
+void movecursor(char *p)
+{
+	assert(inbuf(p));
+	move(0, 0);
+	for (char *i = winstart(); i < winend() && i < p; i++)
+		advcursor(*i);
 }
