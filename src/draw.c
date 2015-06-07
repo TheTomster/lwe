@@ -46,7 +46,7 @@ void set_scroll(int n)
 	if (scroll_linum < 0)
 		scroll_linum = 0;
 	scroll_ptr = getbufstart();
-        for (int i = 0; scroll_ptr != getbufend() && i < n - 1; i++)
+        for (int i = 0; scroll_ptr != getbufend() && i < scroll_linum; i++)
 		scroll_ptr = nextline(scroll_ptr);
 	refresh_bounds();
 }
