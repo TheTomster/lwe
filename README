@@ -6,6 +6,26 @@
 a cursorless text editor
 
 
+llwe is a text editor in the terminal.  llwe is for you if you like your
+editor to start up quickly, don't care for frills and extensions, and
+want to try a very different method for controlling your text editor.
+If you dig the extensibility of emacs or have more than 10 lines in
+your .vimrc then you may enjoy trying out llwe but probably won't find
+it useful for day to day use.
+
+Learning llwe shouldn't be too difficult if you're coming from vim,
+since you'll already be familiar with modal editing.  No matter what
+editor you currently use, simplicity is an important goal of llwe so
+there should be relatively few commands to learn.  The reward for your
+efforts is an editor that encourages flow by allowing you to quickly
+change anything you can see.  See below for details on how this works.
+Or compile the code and get editing!
+
+Github: https://github.com/thetomster/llwe
+Issues: https://github.com/thetomster/llwe/issues
+Mirror: http://git.minbytes.com/?p=llwe.git;a=summary
+
+
 Quick command reference:
 
     j/C-d        scroll down
@@ -23,29 +43,88 @@ Quick command reference:
     y            yank text
     o            paste before
     p            paste after
+    1            pipe text through shell command
+    !            pipe lines through shell command
+
+
+Compiling / Installing
+
+You should be able to simply clone the git repository and run make.
+If that gives you errors about missing curses headers, you may need to
+install libncurses-dev (or the equivalent for your system).
+
+To install you can copy the llwe executable to a location in your $PATH.
+I usually have ~/bin in my path so I copy it to ~/bin/llwe.
+
+	$ git clone https://github.com/TheTomster/llwe
+	$ cd llwe
+	$ make
+	$ cp ./llwe ~/bin/llwe
+
+
+First steps
+
+	$ llwe foo
+
+This command will open llwe editing file foo.  If foo doesn't exist,
+an empty buffer will be opened, and the first time you write it will
+create foo.
+
+To start writing in an empty file, press `i` and start typing.  You should
+see your text appear.  When it starts up, llwe is in COMMAND mode.
+In this default mode it interprets your keypresses as commands to run.
+Pressing lowercase i while in COMMAND mode will switch to INSERT mode.
+In INSERT mode, your keypresses will insert text into the buffer, just
+like notepad or nano.
+
+Press escape or control-d to exit INSERT mode.  The last line of the
+screen displays some status information, including what mode you're in.
+It also tells the name of the file you are currently editing, as well
+as what line you are scrolled to.
+
+	[F: filename    ][M: mode    ][L: scroll pos]
+
+If you've been following along, the status line should show that you're
+in COMMAND mode.  Now you can press w (lowercase) to save the file.
+There's no indication of a successful write, only an error on failure :-).
+Finally, you can press q to quit.
+
+Let's reopen the file to make sure that llwe is working, and to try out
+this "cursorless editing" thing.  If there's already text in the buffer,
+you'll notice that pressing i doesn't take you straight to INSERT mode.
+Instead you get something called TARGET mode.  Since there's no cursor,
+specifying where to act on the text is a separate step.  Inserts and
+appends add text before or after the target you select.  Once you've
+selected a location, llwe switches to INSERT mode.  The change and
+delete commands do targeting twice, to pick a start and end point.
+Everything between the points will be removed, and you'll be put into
+INSERT or COMMAND mode depending on whether you did a change or delete.
+
+Lowercase commands tend to operate on single letters. Uppercase commands
+tend to operate on lines.  Experiment with i, I, d, and D to get an idea
+of how the targeting works.
+
+Refer to the quick command list above to get an idea of what other
+commands are available to you.
 
 
 Cursorless editing
 
 In a typical screen-oriented text editor, a cursor is used to indicate
-where editing operations will happen.  In `llwe`, there is no cursor.
+where editing operations will happen.  In llwe, there is no cursor.
 Instead, each operation waits for a target.  For example, to insert text
 you would type 'i' for insert, and then specify a location to insert
 the text.  Typing a letter that appears on screen will start inserting
 text at that letter.  Frequently there is more than one matching letter
-on screen.  `llwe` will highlight all of the matches and label them a-z,
+on screen.  llwe will highlight all of the matches and label them a-z,
 to allow you to choose which one you intended.  If there are a lot of
 matches, it might take more than one layer of relabeling to specify the
 correct one.  More than 2 layers is relatively rare, since you would
 need more than 600 of the same letter on your screen to require a third
 layer of disambiguation.
 
-In practice, this works pretty well.  Instead of navigating the cursor
-around constantly, you can locate where you wish to edit with your eyes.
+This is difficult to explain in words, but I think it's intuitive after
+a little experimentation.  Instead of navigating the cursor around
+constantly, you can locate where you wish to edit with your eyes.
 Then simply press the letter you're insterested in, and keep pressing
 the letters that pop up until the targeting is done.
-
-
-Drawbacks
-
-I have no idea how macros / repetition could ever work with this.
