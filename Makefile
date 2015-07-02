@@ -1,13 +1,25 @@
 CFLAGS = -O0 -g -Wall -Wextra -pedantic -Werror -std=c99 -pipe
 LDLIBS = -lcurses
 
-OBJS = src/llwe.o src/err.o src/buffer.o src/draw.o src/yank.o src/bang.o
+OBJS = llwe.o err.o buffer.o draw.o yank.o bang.o
+
+all: llwe
+
+clean:
+	@rm -f *.o llwe
+
+.c.o:
+	@echo CC $<
+	@$(CC) -c $(CFLAGS) $<
 
 llwe: $(OBJS)
-	$(CC) $(CFLAGS) $(LDFLAGS) -o llwe $(OBJS) $(LDLIBS)
+	@echo LD $@
+	@$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $(OBJS) $(LDLIBS)
 
-src/draw.o: src/buffer.h src/draw.h src/yank.h
-src/buffer.o: src/err.h src/buffer.h
-src/llwe.o: src/buffer.h src/err.h src/draw.h src/yank.h src/bang.h
-src/yank.o: src/yank.h
-src/bang.o: src/bang.h src/err.h
+draw.o: buffer.h draw.h yank.h
+buffer.o: err.h buffer.h
+llwe.o: buffer.h err.h draw.h yank.h bang.h
+yank.o: yank.h
+bang.o: bang.h err.h
+
+.PHONY: all clean
