@@ -12,11 +12,11 @@
 #include "err.h"
 #include "draw.h"
 #include "yank.h"
+#include "undo.h"
+#include "insert.h"
 
-#define KEY_ESCAPE 27
 #define C_D 4
 #define C_U 21
-#define C_W 23
 
 struct range {
 	char *start;
@@ -96,88 +96,11 @@ int huntline(void)
 	return off;
 }
 
-/* Copies the text indicated by start and end into a new yank entry. */
-void yank(char *start, char *end)
-{
-	if (end != getbufend())
-		end++;
-	yank_store(start, end);
-}
-
-/* Deletes some text from the buffer, storing it in a new yank entry. */
+/* Deletes some text from the buffer. */
 void delete(char *start, char *end)
 {
-	if (end != getbufend())
-		end++;
 	bufdelete(start, end);
 	refresh_bounds();
-}
-
-/* Deletes a word.  `t` is a pointer to a buffer pointer.  The pointer will
- * be moved back to before the previous word, and delete will be called to
- * remove the word from the buffer. */
-void ruboutword(char **t)
-{
-	/* Don't delete letter that our cursor is on otherwise we
-	 * would remove the letter after our last entered character
-	 * in insert mode. */
-	char *dend = *t;
-	char *dstart = dend;
-	while (isspace(*dstart) && (dstart > getbufstart()))
-		dstart--;
-	while (!isspace(*dstart) && (dstart > getbufstart()))
-		dstart--;
-	/* Preserve space before cursor when we can, it looks better. */
-	if (dstart != getbufstart() && ((dstart + 1) < dend))
-		dstart++;
-	delete(dstart, dend);
-	*t = dstart;
-}
-
-/* Reads user input and updates the buffer / screen while the user is
- * inserting text. */
-int insertmode(char *t)
-{
-	mode = "INSERT";
-	int c;
-	for (;;) {
-		refresh_bounds();
-		if (t > winend())
-			adjust_scroll(LINES / 2);
-		clrscreen();
-		drawtext();
-		draw_eof();
-		drawmodeline(filename, mode);
-		movecursor(t);
-		present();
-		c = getch();
-		if (c == '\r')
-			c = '\n';
-		if (c == C_D || c == KEY_ESCAPE)
-			return 1;
-		if (c == KEY_BACKSPACE || c == 127) {
-			if (t <= getbufstart())
-				continue;
-			t--;
-			bufdelete(t, t + 1);
-			continue;
-		}
-		if (c == C_W) {
-			if (t <= getbufstart())
-				continue;
-			t--;
-			ruboutword(&t);
-			continue;
-		}
-		if (!isgraph(c) && !isspace(c)) {
-			continue;
-		}
-		if (!bufinsert(c, t))
-			return 0;
-		else
-			t++;
-	}
-	return 1;
 }
 
 /* After a command executes, we signal whether to continue the main loop,
@@ -253,27 +176,35 @@ char *hunt(void)
 	drawmodeline(filename, mode);
 	present();
 	c = getch();
+	if (!isgraph(c) && !isspace(c))
+		return NULL;
 	return disamb(c);
 }
 
 enum loopsig insertcmd(void)
 {
+	char *t;
 	mode = "TARGET (INSERT)";
-	char *start = hunt();
-	if (start == NULL)
-		return false;
-	return checksig(insertmode(start));
+	if (!(t = hunt()))
+		return LOOP_SIGCNT;
+	if (insertmode(filename, t) < 0)
+		return LOOP_SIGERR;
+	recstep();
+	return LOOP_SIGCNT;
 }
 
 enum loopsig appendcmd(void)
 {
+	char *t;
 	mode = "TARGET (APPEND)";
-	char *start = hunt();
-	if (start == NULL)
-		return false;
-	if (start != getbufend())
-		start++;
-	return checksig(insertmode(start));
+	if (!(t = hunt()))
+		return LOOP_SIGCNT;
+	if (t != getbufend())
+		t++;
+	if (insertmode(filename, t) < 0)
+		return LOOP_SIGERR;
+	recstep();
+	return LOOP_SIGCNT;
 }
 
 enum loopsig writecmd(void)
@@ -317,6 +248,8 @@ void huntrange(struct range *result)
 		return;
 	}
 	orient(&result->start, &result->end);
+	if (result->end != getbufend())
+		result->end++;
 	assert(result->start != NULL && result->end != NULL);
 }
 
@@ -325,23 +258,31 @@ enum loopsig deletecmd(void)
 	mode = "TARGET (DELETE)";
 	struct range r;
 	huntrange(&r);
-	if (r.start == NULL || r.end == NULL)
+	if (!r.start || !r.end)
 		return LOOP_SIGCNT;
-	yank(r.start, r.end);
+	yank_store(r.start, r.end);
+	if (recdelete(r.start, r.end) < 0)
+		return LOOP_SIGERR;
+	recstep();
 	delete(r.start, r.end);
 	return LOOP_SIGCNT;
 }
 
 enum loopsig changecmd(void)
 {
-	mode = "TARGET (CHANGE)";
 	struct range r;
+	mode = "TARGET (CHANGE)";
 	huntrange(&r);
-	if (r.start == NULL || r.end == NULL)
+	if (!r.start || !r.end)
 		return LOOP_SIGCNT;
-	yank(r.start, r.end);
+	yank_store(r.start, r.end);
+	if (recdelete(r.start, r.end) < 0)
+		return LOOP_SIGERR;
 	delete(r.start, r.end);
-	return checksig(insertmode(r.start));
+	if (insertmode(filename, r.start) < 0)
+		return LOOP_SIGERR;
+	recstep();
+	return LOOP_SIGCNT;
 }
 
 enum loopsig reloadcmd(void)
@@ -458,6 +399,8 @@ struct linerange huntlinerange(void)
 	if (lstart == NULL)
 		return NULL_LINERANGE;
 	char *end = endofline(lstart);
+	if (end != getbufend())
+		end++;
 	return (struct linerange) {.start = start, .end = end};
 }
 
@@ -465,22 +408,31 @@ enum loopsig deletelinescmd(void)
 {
 	mode = "TARGET LINES (DELETE)";
 	struct linerange r = huntlinerange();
-	if (r.start == NULL || r.end == NULL)
+	if (!r.start || !r.end)
 		return LOOP_SIGCNT;
-	yank(r.start, r.end);
+	yank_store(r.start, r.end);
+	if (recdelete(r.start, r.end) < 0)
+		return LOOP_SIGERR;
+	recstep();
 	delete(r.start, r.end);
 	return LOOP_SIGCNT;
 }
 
 enum loopsig changelinescmd(void)
 {
+	struct linerange r;
 	mode = "TARGET LINES (CHANGE)";
-	struct linerange r = huntlinerange();
-	if (r.start == NULL || r.end == NULL)
+	r = huntlinerange();
+	if (!r.start || !r.end)
 		return LOOP_SIGCNT;
-	yank(r.start, r.end);
+	yank_store(r.start, r.end);
+	if (recdelete(r.start, r.end) < 0)
+		return LOOP_SIGERR;
 	delete(r.start, r.end);
-	return checksig(insertmode(r.start));
+	if (insertmode(filename, r.start) < 0)
+		return LOOP_SIGERR;
+	recstep();
+	return LOOP_SIGCNT;
 }
 
 /* Draws line numbers on the screen until dismissed with a key press. */
@@ -501,9 +453,9 @@ enum loopsig yankcmd(void)
 	mode = "TARGET (YANK)";
 	struct range r;
 	huntrange(&r);
-	if (r.start == NULL || r.end == NULL)
+	if (!r.start || !r.end)
 		return LOOP_SIGCNT;
-	yank(r.start, r.end);
+	yank_store(r.start, r.end);
 	return LOOP_SIGCNT;
 }
 
@@ -511,9 +463,9 @@ enum loopsig yanklinescmd(void)
 {
 	mode = "TARGET LINES (YANK)";
 	struct linerange r = huntlinerange();
-	if (r.start == NULL || r.end == NULL)
+	if (!r.start || !r.end)
 		return LOOP_SIGCNT;
-	yank(r.start, r.end);
+	yank_store(r.start, r.end);
 	return LOOP_SIGCNT;
 }
 
@@ -545,11 +497,14 @@ enum loopsig preputcmd(void)
 	if (t == NULL)
 		return LOOP_SIGCNT;
 	struct yankstr y = yankhunt();
-	if (y.start == NULL || y.end == NULL)
+	if (!y.start || !y.end)
 		return LOOP_SIGCNT;
 	bool ok = bufinsertstr(y.start, y.end, t);
 	if (!ok)
 		return LOOP_SIGERR;
+	if (recinsert(y.start, y.end) < 0)
+		return LOOP_SIGERR;
+	recstep();
 	refresh_bounds();
 	return LOOP_SIGCNT;
 }
@@ -568,46 +523,58 @@ enum loopsig putcmd(void)
 	bool ok = bufinsertstr(y.start, y.end, t);
 	if (!ok)
 		return LOOP_SIGERR;
+	if (recinsert(y.start, y.end) < 0)
+		return LOOP_SIGERR;
+	recstep();
 	refresh_bounds();
 	return LOOP_SIGCNT;
 }
 
 enum loopsig insertlinecmd(void)
 {
+	int lineno;
+	char *t;
 	mode = "TARGET (INSERT)";
-	int lineno = huntline();
+	lineno = huntline();
 	if (lineno == -1)
 		return LOOP_SIGCNT;
-	char *start = bufline(winstart(), lineno);
-	if(start == NULL)
+	if(!(t = bufline(winstart(), lineno)))
 		return LOOP_SIGCNT;
-	char *insertpos = start;
-	if (insertpos != getbufstart())
-		insertpos--;
-	bufinsert('\n', insertpos);
-	return checksig(insertmode(start));
+	if (t != getbufstart())
+		t--;
+	bufinsert('\n', t);
+	recinsert(t, t + 1);
+	if (insertmode(filename, t + 1) < 0)
+		return LOOP_SIGERR;
+	recstep();
+	return LOOP_SIGCNT;
 }
 
 enum loopsig appendlinecmd(void)
 {
+	int lineno;
+	char *lns, *lne;
 	mode = "TARGET (APPEND)";
-	int lineno = huntline();
+	lineno = huntline();
 	if (lineno == -1)
 		return LOOP_SIGCNT;
-	char *start = bufline(winstart(), lineno);
-	if(start == NULL)
+	lns = bufline(winstart(), lineno);
+	if(lns == NULL)
 		return LOOP_SIGCNT;
-	char *end = endofline(start);
-	bufinsert('\n', end );
-	return checksig(insertmode(end + 1));
+	lne = endofline(lns);
+	bufinsert('\n', lne);
+	recinsert(lne, lne + 1);
+	if (insertmode(filename, lne + 1) < 0)
+		return LOOP_SIGERR;
+	recstep();
+	return LOOP_SIGCNT;
 }
 
 bool ranged_bang(char *start, char *end)
 {
-	if (end != getbufend())
-		end++;
 	char cmd[8192];
-	bool ok = queryuser(cmd, sizeof(cmd), "COMMAND");
+	bool ok;
+	ok = queryuser(cmd, sizeof(cmd), "COMMAND");
 	if (!ok) {
 		return true;
 	}
@@ -619,17 +586,25 @@ bool ranged_bang(char *start, char *end)
 		drawmessage(e.buf);
 		present();
 		getch();
-		free(o.buf);
-		free(e.buf);
-		return true;
+		goto cleanup;
 	}
 	yank_store(start, end);
+	if (recdelete(start, end) < 0) {
+		ok = false;
+		goto cleanup;
+	}
 	bufdelete(start, end);
 	bufinsertstr(o.buf, o.buf + o.sz, start);
+	if (recinsert(start, start + o.sz) < 0) {
+		ok = false;
+		goto cleanup;
+	}
+	recstep();
+cleanup:
 	free(o.buf);
 	free(e.buf);
 	refresh_bounds();
-	return true;
+	return ok;
 }
 
 enum loopsig bangcmd(void)
@@ -637,7 +612,7 @@ enum loopsig bangcmd(void)
 	mode = "TARGET (SHELL)";
 	struct range r;
 	huntrange(&r);
-	if (r.start == NULL || r.end == NULL)
+	if (!r.start || !r.end)
 		return LOOP_SIGCNT;
 	return checksig(ranged_bang(r.start, r.end));
 }
@@ -646,7 +621,7 @@ enum loopsig banglinescmd(void)
 {
 	mode = "TARGET (SHELL)";
 	struct linerange r = huntlinerange();
-	if (r.start == NULL || r.end == NULL)
+	if (!r.start || !r.end)
 		return LOOP_SIGCNT;
 	return checksig(ranged_bang(r.start, r.end));
 }
@@ -654,6 +629,13 @@ enum loopsig banglinescmd(void)
 enum loopsig togglewhitespacecmd(void)
 {
 	show_whitespace = show_whitespace ^ 1;
+	return LOOP_SIGCNT;
+}
+
+enum loopsig undocmd(void)
+{
+	undo();
+	refresh_bounds();
 	return LOOP_SIGCNT;
 }
 
@@ -689,6 +671,7 @@ command_fn cmdtbl[512] = {
 	['1'] = bangcmd,
 	['!'] = banglinescmd,
 	['s'] = togglewhitespacecmd,
+	['u'] = undocmd,
 };
 
 int cmdloop(void)

@@ -66,6 +66,16 @@ char *winend()
 	return bounds.end;
 }
 
+int winrows()
+{
+	return LINES;
+}
+
+int wincols()
+{
+	return COLS;
+}
+
 void refresh_bounds()
 {
 	bounds.start = scroll_ptr;
