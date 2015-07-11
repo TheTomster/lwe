@@ -176,6 +176,8 @@ char *hunt(void)
 	drawmodeline(filename, mode);
 	present();
 	c = getch();
+	if (!isgraph(c) && !isspace(c))
+		return NULL;
 	return disamb(c);
 }
 
@@ -184,7 +186,7 @@ enum loopsig insertcmd(void)
 	char *t;
 	mode = "TARGET (INSERT)";
 	if (!(t = hunt()))
-		return LOOP_SIGERR;
+		return LOOP_SIGCNT;
 	if (insertmode(filename, t) < 0)
 		return LOOP_SIGERR;
 	recstep();
@@ -196,7 +198,7 @@ enum loopsig appendcmd(void)
 	char *t;
 	mode = "TARGET (APPEND)";
 	if (!(t = hunt()))
-		return LOOP_SIGERR;
+		return LOOP_SIGCNT;
 	if (t != getbufend())
 		t++;
 	if (insertmode(filename, t) < 0)
@@ -256,7 +258,7 @@ enum loopsig deletecmd(void)
 	mode = "TARGET (DELETE)";
 	struct range r;
 	huntrange(&r);
-	if (r.start == NULL || r.end == NULL)
+	if (!r.start || !r.end)
 		return LOOP_SIGCNT;
 	yank_store(r.start, r.end);
 	if (recdelete(r.start, r.end) < 0)
@@ -271,7 +273,7 @@ enum loopsig changecmd(void)
 	struct range r;
 	mode = "TARGET (CHANGE)";
 	huntrange(&r);
-	if (r.start == NULL || r.end == NULL)
+	if (!r.start || !r.end)
 		return LOOP_SIGCNT;
 	yank_store(r.start, r.end);
 	if (recdelete(r.start, r.end) < 0)
@@ -406,7 +408,7 @@ enum loopsig deletelinescmd(void)
 {
 	mode = "TARGET LINES (DELETE)";
 	struct linerange r = huntlinerange();
-	if (r.start == NULL || r.end == NULL)
+	if (!r.start || !r.end)
 		return LOOP_SIGCNT;
 	yank_store(r.start, r.end);
 	if (recdelete(r.start, r.end) < 0)
@@ -421,7 +423,7 @@ enum loopsig changelinescmd(void)
 	struct linerange r;
 	mode = "TARGET LINES (CHANGE)";
 	r = huntlinerange();
-	if (r.start == NULL || r.end == NULL)
+	if (!r.start || !r.end)
 		return LOOP_SIGCNT;
 	yank_store(r.start, r.end);
 	if (recdelete(r.start, r.end) < 0)
@@ -451,7 +453,7 @@ enum loopsig yankcmd(void)
 	mode = "TARGET (YANK)";
 	struct range r;
 	huntrange(&r);
-	if (r.start == NULL || r.end == NULL)
+	if (!r.start || !r.end)
 		return LOOP_SIGCNT;
 	yank_store(r.start, r.end);
 	return LOOP_SIGCNT;
@@ -461,7 +463,7 @@ enum loopsig yanklinescmd(void)
 {
 	mode = "TARGET LINES (YANK)";
 	struct linerange r = huntlinerange();
-	if (r.start == NULL || r.end == NULL)
+	if (!r.start || !r.end)
 		return LOOP_SIGCNT;
 	yank_store(r.start, r.end);
 	return LOOP_SIGCNT;
@@ -495,7 +497,7 @@ enum loopsig preputcmd(void)
 	if (t == NULL)
 		return LOOP_SIGCNT;
 	struct yankstr y = yankhunt();
-	if (y.start == NULL || y.end == NULL)
+	if (!y.start || !y.end)
 		return LOOP_SIGCNT;
 	bool ok = bufinsertstr(y.start, y.end, t);
 	if (!ok)
@@ -610,7 +612,7 @@ enum loopsig bangcmd(void)
 	mode = "TARGET (SHELL)";
 	struct range r;
 	huntrange(&r);
-	if (r.start == NULL || r.end == NULL)
+	if (!r.start || !r.end)
 		return LOOP_SIGCNT;
 	return checksig(ranged_bang(r.start, r.end));
 }
@@ -619,7 +621,7 @@ enum loopsig banglinescmd(void)
 {
 	mode = "TARGET (SHELL)";
 	struct linerange r = huntlinerange();
-	if (r.start == NULL || r.end == NULL)
+	if (!r.start || !r.end)
 		return LOOP_SIGCNT;
 	return checksig(ranged_bang(r.start, r.end));
 }
