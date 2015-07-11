@@ -30,6 +30,7 @@ static int tsz, ta;
 #endif
 
 static int checku(void);
+static void undosingle(void);
 
 /* Creates u if needed and ensures u has room for more items. */
 static int checku()
@@ -47,6 +48,25 @@ static int checku()
 		ua *= 2;
 	}
 	return 0;
+}
+
+static void undosingle()
+{
+	char *st;
+	unsigned tsz;
+	st = getbufstart();
+	switch (uh->a) {
+	case INSERT:
+		bufdelete(st + uh->start, st + uh->end);
+		break;
+	case DELETE:
+		tsz = uh->end - uh->start;
+		bufinsertstr(uh->text, uh->text + tsz, st + uh->start);
+		break;
+	}
+	free(uh->text);
+	uh->text = NULL;
+	uh--;
 }
 
 int recinsert(char *start, char *end)
@@ -94,7 +114,12 @@ void recstep()
 }
 
 void undo()
-{}
+{
+	if (s > 0)
+		s--;
+	while (uh && uh >= u && uh->s >= s)
+		undosingle();
+}
 
 void redo()
 {}

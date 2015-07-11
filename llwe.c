@@ -713,6 +713,13 @@ enum loopsig togglewhitespacecmd(void)
 	return LOOP_SIGCNT;
 }
 
+enum loopsig undocmd(void)
+{
+	undo();
+	refresh_bounds();
+	return LOOP_SIGCNT;
+}
+
 /* The list of all commands.  Unused entries will be NULL.  A character
  * can be used as the index into this array to look up the appropriate
  * command. */
@@ -745,6 +752,7 @@ command_fn cmdtbl[512] = {
 	['1'] = bangcmd,
 	['!'] = banglinescmd,
 	['s'] = togglewhitespacecmd,
+	['u'] = undocmd,
 };
 
 int cmdloop(void)
