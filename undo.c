@@ -24,10 +24,6 @@ struct step {
 static unsigned s; /* current step number */
 static struct step *u, *uh; /* undo step struct list, and head of list */
 static int usz, ua;
-#if 0
-static char *t; /* texts for undoes to reference */
-static int tsz, ta;
-#endif
 
 static int checku(void);
 static void undosingle(void);
