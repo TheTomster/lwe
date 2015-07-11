@@ -11,12 +11,12 @@
 #define C_W 23
 #define KEY_ESCAPE 27
 
-static void ruboutword(char **t);
+static int ruboutword(char **t);
 
 /* Deletes a word.  `t` is a pointer to a buffer pointer.  The pointer will
  * be moved back to before the previous word, and delete will be called to
  * remove the word from the buffer. */
-static void ruboutword(char **t)
+static int ruboutword(char **t)
 {
 	/* Don't delete letter that our cursor is on otherwise we
 	 * would remove the letter after our last entered character
@@ -32,9 +32,12 @@ static void ruboutword(char **t)
 		dstart++;
 	if (dend != getbufend())
 		dend++;
+	if (recdelete(dstart, dend) < 0)
+		return -1;
 	bufdelete(dstart, dend);
 	refresh_bounds();
 	*t = dstart;
+	return 0;
 }
 
 /*
@@ -59,11 +62,13 @@ int insertmode(char *filename, char *t)
 		if (c == '\r')
 			c = '\n';
 		if (c == C_D || c == KEY_ESCAPE)
-			return 0;
+			break;
 		if (c == KEY_BACKSPACE || c == 127) {
 			if (t <= getbufstart())
 				continue;
 			t--;
+			if (recdelete(t, t+1) < 0)
+				return -1;
 			bufdelete(t, t + 1);
 			continue;
 		}
@@ -71,7 +76,8 @@ int insertmode(char *filename, char *t)
 			if (t <= getbufstart())
 				continue;
 			t--;
-			ruboutword(&t);
+			if (ruboutword(&t) < 0)
+				return -1;
 			continue;
 		}
 		if (!isgraph(c) && !isspace(c)) {
@@ -79,9 +85,10 @@ int insertmode(char *filename, char *t)
 		}
 		if (!bufinsert(c, t))
 			return -1;
+		if (recinsert(t, t + 1) < 0)
+			return -1;
 		else
 			t++;
 	}
 	return 0;
 }
-

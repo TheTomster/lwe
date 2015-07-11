@@ -110,7 +110,9 @@ int recdelete(char *start, char *end)
 
 void recstep()
 {
-	s++;
+	/* Checks the step of the head; don't record empty steps. */
+	if (uh && uh->s == s)
+		s++;
 }
 
 void undo()
