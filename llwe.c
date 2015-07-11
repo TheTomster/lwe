@@ -13,11 +13,10 @@
 #include "draw.h"
 #include "yank.h"
 #include "undo.h"
+#include "insert.h"
 
-#define KEY_ESCAPE 27
 #define C_D 4
 #define C_U 21
-#define C_W 23
 
 struct range {
 	char *start;
@@ -97,81 +96,11 @@ int huntline(void)
 	return off;
 }
 
-/* Deletes some text from the buffer, storing it in a new yank entry. */
+/* Deletes some text from the buffer. */
 void delete(char *start, char *end)
 {
 	bufdelete(start, end);
 	refresh_bounds();
-}
-
-/* Deletes a word.  `t` is a pointer to a buffer pointer.  The pointer will
- * be moved back to before the previous word, and delete will be called to
- * remove the word from the buffer. */
-void ruboutword(char **t)
-{
-	/* Don't delete letter that our cursor is on otherwise we
-	 * would remove the letter after our last entered character
-	 * in insert mode. */
-	char *dend = *t;
-	char *dstart = dend;
-	while (isspace(*dstart) && (dstart > getbufstart()))
-		dstart--;
-	while (!isspace(*dstart) && (dstart > getbufstart()))
-		dstart--;
-	/* Preserve space before cursor when we can, it looks better. */
-	if (dstart != getbufstart() && ((dstart + 1) < dend))
-		dstart++;
-	delete(dstart, dend);
-	*t = dstart;
-}
-
-/*
- * Reads user input and updates the buffer / screen while the user is
- * inserting text.  Returns a pointer past the end of the inserted text,
- * or NULL if there is an error.
- */
-char *insertmode(char *t)
-{
-	mode = "INSERT";
-	int c;
-	for (;;) {
-		refresh_bounds();
-		if (t > winend())
-			adjust_scroll(LINES / 2);
-		clrscreen();
-		drawtext();
-		draw_eof();
-		drawmodeline(filename, mode);
-		movecursor(t);
-		present();
-		c = getch();
-		if (c == '\r')
-			c = '\n';
-		if (c == C_D || c == KEY_ESCAPE)
-			return t;
-		if (c == KEY_BACKSPACE || c == 127) {
-			if (t <= getbufstart())
-				continue;
-			t--;
-			bufdelete(t, t + 1);
-			continue;
-		}
-		if (c == C_W) {
-			if (t <= getbufstart())
-				continue;
-			t--;
-			ruboutword(&t);
-			continue;
-		}
-		if (!isgraph(c) && !isspace(c)) {
-			continue;
-		}
-		if (!bufinsert(c, t))
-			return NULL;
-		else
-			t++;
-	}
-	return t;
 }
 
 /* After a command executes, we signal whether to continue the main loop,
@@ -256,7 +185,7 @@ enum loopsig insertcmd(void)
 	mode = "TARGET (INSERT)";
 	if (!(start = hunt()))
 		return LOOP_SIGERR;
-	if (!(end = insertmode(start)))
+	if (!(end = insertmode(filename, start)))
 		return LOOP_SIGERR;
 	if (recinsert(start, end) < 0)
 		return LOOP_SIGERR;
@@ -272,7 +201,7 @@ enum loopsig appendcmd(void)
 		return LOOP_SIGERR;
 	if (start != getbufend())
 		start++;
-	if (!(end = insertmode(start)))
+	if (!(end = insertmode(filename, start)))
 		return LOOP_SIGERR;
 	if (recinsert(start, end) < 0)
 		return LOOP_SIGERR;
@@ -353,7 +282,7 @@ enum loopsig changecmd(void)
 	if (recdelete(r.start, r.end) < 0)
 		return LOOP_SIGERR;
 	delete(r.start, r.end);
-	if (!(iend = insertmode(r.start)))
+	if (!(iend = insertmode(filename, r.start)))
 		return LOOP_SIGERR;
 	if (recinsert(r.start, iend) < 0)
 		return LOOP_SIGERR;
@@ -506,7 +435,7 @@ enum loopsig changelinescmd(void)
 	if (recdelete(r.start, r.end) < 0)
 		return LOOP_SIGERR;
 	delete(r.start, r.end);
-	if (!(iend = insertmode(r.start)))
+	if (!(iend = insertmode(filename, r.start)))
 		return LOOP_SIGERR;
 	if (recinsert(r.start, iend) < 0)
 		return LOOP_SIGERR;
@@ -622,7 +551,7 @@ enum loopsig insertlinecmd(void)
 	if (insertpos != getbufstart())
 		insertpos--;
 	bufinsert('\n', insertpos);
-	if (!(end = insertmode(start)))
+	if (!(end = insertmode(filename, start)))
 		return LOOP_SIGERR;
 	if (recinsert(insertpos, end) < 0)
 		return LOOP_SIGERR;
@@ -643,7 +572,7 @@ enum loopsig appendlinecmd(void)
 		return LOOP_SIGCNT;
 	lne = endofline(lns);
 	bufinsert('\n', lne);
-	if (!(ie = insertmode(lne + 1)))
+	if (!(ie = insertmode(filename, lne + 1)))
 		return LOOP_SIGERR;
 	if (recinsert(lne + 1, ie) < 0)
 		return LOOP_SIGERR;
