@@ -181,13 +181,11 @@ char *hunt(void)
 
 enum loopsig insertcmd(void)
 {
-	char *start, *end;
+	char *t;
 	mode = "TARGET (INSERT)";
-	if (!(start = hunt()))
+	if (!(t = hunt()))
 		return LOOP_SIGERR;
-	if (!(end = insertmode(filename, start)))
-		return LOOP_SIGERR;
-	if (recinsert(start, end) < 0)
+	if (insertmode(filename, t) < 0)
 		return LOOP_SIGERR;
 	recstep();
 	return LOOP_SIGCNT;
@@ -195,15 +193,13 @@ enum loopsig insertcmd(void)
 
 enum loopsig appendcmd(void)
 {
-	char *start, *end;
+	char *t;
 	mode = "TARGET (APPEND)";
-	if (!(start = hunt()))
+	if (!(t = hunt()))
 		return LOOP_SIGERR;
-	if (start != getbufend())
-		start++;
-	if (!(end = insertmode(filename, start)))
-		return LOOP_SIGERR;
-	if (recinsert(start, end) < 0)
+	if (t != getbufend())
+		t++;
+	if (insertmode(filename, t) < 0)
 		return LOOP_SIGERR;
 	recstep();
 	return LOOP_SIGCNT;
@@ -273,7 +269,6 @@ enum loopsig deletecmd(void)
 enum loopsig changecmd(void)
 {
 	struct range r;
-	char *iend;
 	mode = "TARGET (CHANGE)";
 	huntrange(&r);
 	if (r.start == NULL || r.end == NULL)
@@ -282,9 +277,7 @@ enum loopsig changecmd(void)
 	if (recdelete(r.start, r.end) < 0)
 		return LOOP_SIGERR;
 	delete(r.start, r.end);
-	if (!(iend = insertmode(filename, r.start)))
-		return LOOP_SIGERR;
-	if (recinsert(r.start, iend) < 0)
+	if (insertmode(filename, r.start) < 0)
 		return LOOP_SIGERR;
 	recstep();
 	return LOOP_SIGCNT;
@@ -426,7 +419,6 @@ enum loopsig deletelinescmd(void)
 enum loopsig changelinescmd(void)
 {
 	struct linerange r;
-	char *iend;
 	mode = "TARGET LINES (CHANGE)";
 	r = huntlinerange();
 	if (r.start == NULL || r.end == NULL)
@@ -435,10 +427,9 @@ enum loopsig changelinescmd(void)
 	if (recdelete(r.start, r.end) < 0)
 		return LOOP_SIGERR;
 	delete(r.start, r.end);
-	if (!(iend = insertmode(filename, r.start)))
+	if (insertmode(filename, r.start) < 0)
 		return LOOP_SIGERR;
-	if (recinsert(r.start, iend) < 0)
-		return LOOP_SIGERR;
+	recstep();
 	return LOOP_SIGCNT;
 }
 
@@ -540,20 +531,18 @@ enum loopsig putcmd(void)
 enum loopsig insertlinecmd(void)
 {
 	int lineno;
-	char *start, *end, *insertpos;
+	char *t;
 	mode = "TARGET (INSERT)";
 	lineno = huntline();
 	if (lineno == -1)
 		return LOOP_SIGCNT;
-	if(!(start = bufline(winstart(), lineno)))
+	if(!(t = bufline(winstart(), lineno)))
 		return LOOP_SIGCNT;
-	insertpos = start;
-	if (insertpos != getbufstart())
-		insertpos--;
-	bufinsert('\n', insertpos);
-	if (!(end = insertmode(filename, start)))
-		return LOOP_SIGERR;
-	if (recinsert(insertpos, end) < 0)
+	if (t != getbufstart())
+		t--;
+	bufinsert('\n', t);
+	recinsert(t, t + 1);
+	if (insertmode(filename, t + 1) < 0)
 		return LOOP_SIGERR;
 	recstep();
 	return LOOP_SIGCNT;
@@ -562,7 +551,7 @@ enum loopsig insertlinecmd(void)
 enum loopsig appendlinecmd(void)
 {
 	int lineno;
-	char *lns, *lne, *ie;
+	char *lns, *lne;
 	mode = "TARGET (APPEND)";
 	lineno = huntline();
 	if (lineno == -1)
@@ -572,9 +561,8 @@ enum loopsig appendlinecmd(void)
 		return LOOP_SIGCNT;
 	lne = endofline(lns);
 	bufinsert('\n', lne);
-	if (!(ie = insertmode(filename, lne + 1)))
-		return LOOP_SIGERR;
-	if (recinsert(lne + 1, ie) < 0)
+	recinsert(lne, lne + 1);
+	if (insertmode(filename, lne + 1) < 0)
 		return LOOP_SIGERR;
 	recstep();
 	return LOOP_SIGCNT;

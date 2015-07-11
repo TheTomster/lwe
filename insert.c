@@ -42,7 +42,7 @@ static void ruboutword(char **t)
  * inserting text.  Returns a pointer past the end of the inserted text,
  * or NULL if there is an error.
  */
-char *insertmode(char *filename, char *t)
+int insertmode(char *filename, char *t)
 {
 	int c;
 	for (;;) {
@@ -59,7 +59,7 @@ char *insertmode(char *filename, char *t)
 		if (c == '\r')
 			c = '\n';
 		if (c == C_D || c == KEY_ESCAPE)
-			return t;
+			return 0;
 		if (c == KEY_BACKSPACE || c == 127) {
 			if (t <= getbufstart())
 				continue;
@@ -78,10 +78,10 @@ char *insertmode(char *filename, char *t)
 			continue;
 		}
 		if (!bufinsert(c, t))
-			return NULL;
+			return -1;
 		else
 			t++;
 	}
-	return t;
+	return 0;
 }
 
