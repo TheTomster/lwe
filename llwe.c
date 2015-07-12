@@ -15,18 +15,18 @@
 #include "undo.h"
 #include "insert.h"
 
-#define C_D 4
-#define C_U 21
+#define bufempty() (getbufstart() == getbufend())
+#define screenline(n) (skipscreenlines(winstart(), n))
 
 struct range {
 	char *start;
 	char *end;
 };
 
-char *filename, *mode;
+#define C_D 4
+#define C_U 21
 
-#define bufempty() (getbufstart() == getbufend())
-#define screenline(n) (skipscreenlines(winstart(), n))
+char *filename, *mode;
 
 /* Finds the nth occurance of character c within the window.  Returns a
  * buffer pointer. */
@@ -592,6 +592,7 @@ bool ranged_bang(char *start, char *end)
 		drawmessage(e.buf);
 		present();
 		getch();
+		ok = true;
 		goto cleanup;
 	}
 	yank_store(start, end);
