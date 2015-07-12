@@ -494,6 +494,7 @@ enum loopsig preputcmd(void)
 {
 	mode = "TARGET (PRE-PUT)";
 	char *t = hunt();
+	int ysz;
 	if (t == NULL)
 		return LOOP_SIGCNT;
 	struct yankstr y = yankhunt();
@@ -502,7 +503,9 @@ enum loopsig preputcmd(void)
 	bool ok = bufinsertstr(y.start, y.end, t);
 	if (!ok)
 		return LOOP_SIGERR;
-	if (recinsert(y.start, y.end) < 0)
+	ysz = y.end - y.start;
+	assert(ysz > 0);
+	if (recinsert(t, t + ysz) < 0)
 		return LOOP_SIGERR;
 	recstep();
 	refresh_bounds();
@@ -523,7 +526,9 @@ enum loopsig putcmd(void)
 	bool ok = bufinsertstr(y.start, y.end, t);
 	if (!ok)
 		return LOOP_SIGERR;
-	if (recinsert(y.start, y.end) < 0)
+	int ysz = y.end - y.start;
+	assert(ysz > 0);
+	if (recinsert(t, t + ysz) < 0)
 		return LOOP_SIGERR;
 	recstep();
 	refresh_bounds();
@@ -543,7 +548,8 @@ enum loopsig insertlinecmd(void)
 	if (t != getbufstart())
 		t--;
 	bufinsert('\n', t);
-	recinsert(t, t + 1);
+	if (recinsert(t, t + 1) < 0)
+		return LOOP_SIGERR;
 	if (insertmode(filename, t + 1) < 0)
 		return LOOP_SIGERR;
 	recstep();
@@ -639,6 +645,30 @@ enum loopsig undocmd(void)
 	return LOOP_SIGCNT;
 }
 
+enum loopsig preputlinecmd(void)
+{
+	char *t;
+	int l, ysz;
+	mode = "TARGET (PREPUT LINE)";
+	l = huntline();
+	if (l < 0)
+		return LOOP_SIGCNT;
+	if (!(t = bufline(winstart(), l)))
+		return LOOP_SIGCNT;
+	struct yankstr y = yankhunt();
+	if (!y.start || !y.end)
+		return LOOP_SIGCNT;
+	if (!bufinsertstr(y.start, y.end, t))
+		return LOOP_SIGERR;
+	ysz = y.end - y.start;
+	assert(ysz > 0);
+	if (recinsert(t, t + ysz) < 0)
+		return LOOP_SIGERR;
+	recstep();
+	refresh_bounds();
+	return LOOP_SIGCNT;
+}
+
 /* The list of all commands.  Unused entries will be NULL.  A character
  * can be used as the index into this array to look up the appropriate
  * command. */
@@ -651,27 +681,28 @@ command_fn cmdtbl[512] = {
 	[KEY_UP] = scrollup,
 	[KEY_PPAGE] = scrollup,
 	['k'] = scrollup,
-	['q'] = quitcmd,
-	['i'] = insertcmd,
-	['I'] = insertlinecmd,
-	['a'] = appendcmd,
-	['A'] = appendlinecmd,
-	['w'] = writecmd,
-	['d'] = deletecmd,
-	['c'] = changecmd,
-	['r'] = reloadcmd,
-	['g'] = jumptolinecmd,
-	['D'] = deletelinescmd,
-	['C'] = changelinescmd,
-	['n'] = lineoverlaycmd,
-	['y'] = yankcmd,
-	['Y'] = yanklinescmd,
-	['p'] = putcmd,
-	['o'] = preputcmd,
-	['1'] = bangcmd,
 	['!'] = banglinescmd,
+	['1'] = bangcmd,
+	['A'] = appendlinecmd,
+	['C'] = changelinescmd,
+	['D'] = deletelinescmd,
+	['I'] = insertlinecmd,
+	['O'] = preputlinecmd,
+	['Y'] = yanklinescmd,
+	['a'] = appendcmd,
+	['c'] = changecmd,
+	['d'] = deletecmd,
+	['g'] = jumptolinecmd,
+	['i'] = insertcmd,
+	['n'] = lineoverlaycmd,
+	['o'] = preputcmd,
+	['p'] = putcmd,
+	['q'] = quitcmd,
+	['r'] = reloadcmd,
 	['s'] = togglewhitespacecmd,
 	['u'] = undocmd,
+	['w'] = writecmd,
+	['y'] = yankcmd,
 };
 
 int cmdloop(void)
