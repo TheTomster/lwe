@@ -17,8 +17,31 @@
 
 #define bufempty() (getbufstart() == getbufend())
 #define screenline(n) (skipscreenlines(winstart(), n))
+#define NULL_LINERANGE ((struct linerange) {.start = NULL, .end = NULL})
 
 struct range {
+	char *start;
+	char *end;
+};
+
+/*
+ * After a command executes, we signal whether to continue the main loop,
+ * quit normally, or stop due to an error.
+ */
+enum loopsig {
+	LOOP_SIGCNT,
+	LOOP_SIGQUIT,
+	LOOP_SIGERR
+};
+
+typedef enum loopsig (*command_fn) (void);
+
+struct linerange {
+	char *start;
+	char *end;
+};
+
+struct yankstr {
 	char *start;
 	char *end;
 };
@@ -26,11 +49,90 @@ struct range {
 #define C_D 4
 #define C_U 21
 
-char *filename, *mode;
+static char *find(char c, int n);
+static int disambget(int lvl, int off, int n);
+static bool lineselected(int lvl, int off);
+static int getoffset(int lvl, int off);
+static int huntline(void);
+static void delete(char *start, char *end);
+static enum loopsig checksig(bool ok);
+static enum loopsig scrolldown(void);
+static enum loopsig scrollup(void);
+static enum loopsig quitcmd(void);
+static char *disamb(char c);
+static char *hunt(void);
+static enum loopsig insertcmd(void);
+static enum loopsig appendcmd(void);
+static enum loopsig writecmd(void);
+static void orient(char **start, char **end);
+static void huntrange(struct range *result);
+static enum loopsig deletecmd(void);
+static enum loopsig changecmd(void);
+static enum loopsig reloadcmd(void);
+static bool queryuser(char *out, int out_sz, char *prompt);
+static enum loopsig jumptolinecmd(void);
+static void orienti(int *a, int *b);
+static char *bufline(char *start, int lines);
+static struct linerange huntlinerange(void);
+static enum loopsig deletelinescmd(void);
+static enum loopsig changelinescmd(void);
+static enum loopsig lineoverlaycmd(void);
+static enum loopsig yankcmd(void);
+static enum loopsig yanklinescmd(void);
+static struct yankstr yankhunt(void);
+static enum loopsig preputcmd(void);
+static enum loopsig putcmd(void);
+static enum loopsig insertlinecmd(void);
+static enum loopsig appendlinecmd(void);
+static bool ranged_bang(char *start, char *end);
+static enum loopsig bangcmd(void);
+static enum loopsig banglinescmd(void);
+static enum loopsig togglewhitespacecmd(void);
+static enum loopsig undocmd(void);
+static enum loopsig preputlinecmd(void);
+static int cmdloop(void);
+
+static char *filename, *mode;
+
+/* The list of all commands.  Unused entries will be NULL.  A character
+ * can be used as the index into this array to look up the appropriate
+ * command. */
+static command_fn cmdtbl[512] = {
+	[C_D] = scrolldown,
+	[KEY_DOWN] = scrolldown,
+	[KEY_NPAGE] = scrolldown,
+	['j'] = scrolldown,
+	[C_U] = scrollup,
+	[KEY_UP] = scrollup,
+	[KEY_PPAGE] = scrollup,
+	['k'] = scrollup,
+	['!'] = banglinescmd,
+	['1'] = bangcmd,
+	['A'] = appendlinecmd,
+	['C'] = changelinescmd,
+	['D'] = deletelinescmd,
+	['I'] = insertlinecmd,
+	['O'] = preputlinecmd,
+	['Y'] = yanklinescmd,
+	['a'] = appendcmd,
+	['c'] = changecmd,
+	['d'] = deletecmd,
+	['g'] = jumptolinecmd,
+	['i'] = insertcmd,
+	['n'] = lineoverlaycmd,
+	['o'] = preputcmd,
+	['p'] = putcmd,
+	['q'] = quitcmd,
+	['r'] = reloadcmd,
+	['s'] = togglewhitespacecmd,
+	['u'] = undocmd,
+	['w'] = writecmd,
+	['y'] = yankcmd,
+};
 
 /* Finds the nth occurance of character c within the window.  Returns a
  * buffer pointer. */
-char *find(char c, int n)
+static char *find(char c, int n)
 {
 	for (char *i = winstart(); i < winend(); i++) {
 		if (*i != c) continue;
@@ -43,7 +145,7 @@ char *find(char c, int n)
 /* Takes a level, offset, and an index.  Finds the match at that index
  * for that level of disambiguation.  The index would correspond to the
  * key that the user pressed... 'c' => 2, 'a' => 0, for example. */
-int disambget(int lvl, int off, int n)
+static int disambget(int lvl, int off, int n)
 {
 	int delta = (skips(lvl) + 1) * n;
 	return off + delta;
@@ -53,7 +155,7 @@ int disambget(int lvl, int off, int n)
  * given lvl and offset.  Since there could be more than 26 lines on
  * screen we have to perform disambiguation, and this function tells us
  * when to stop. */
-bool lineselected(int lvl, int off)
+static bool lineselected(int lvl, int off)
 {
 	/* Checks if the 2nd match would be off screen. */
 	return disambget(lvl, off, 1) > LINES;
@@ -62,7 +164,7 @@ bool lineselected(int lvl, int off)
 /* Given a disamb level and offset (from previous layers of disamb),
  * queries the user for the next selection.  Reads a char from input
  * and calculates the offset for the next layer of disambiguation. */
-int getoffset(int lvl, int off)
+static int getoffset(int lvl, int off)
 {
 	char c = getch();
 	int i = c - 'a';
@@ -75,7 +177,7 @@ int getoffset(int lvl, int off)
  * number (where the top of the screen is 0) that the user has selected.
  * This requires multiple layers of disambiguation of we have more than
  * 26 lines on screen. */
-int huntline(void)
+static int huntline(void)
 {
 	int lvl = 0;
 	int off = 0;
@@ -97,42 +199,32 @@ int huntline(void)
 }
 
 /* Deletes some text from the buffer. */
-void delete(char *start, char *end)
+static void delete(char *start, char *end)
 {
 	bufdelete(start, end);
 	refresh_bounds();
 }
 
-/* After a command executes, we signal whether to continue the main loop,
- * quit normally, or stop due to an error. */
-enum loopsig {
-	LOOP_SIGCNT,
-	LOOP_SIGQUIT,
-	LOOP_SIGERR
-};
-
 /* Convenience function for checking a boolean result.  On true we continue
  * the main loop, on false we error. */
-enum loopsig checksig(bool ok)
+static enum loopsig checksig(bool ok)
 {
 	return ok ? LOOP_SIGCNT : LOOP_SIGERR;
 }
 
-typedef enum loopsig (*command_fn) (void);
-
-enum loopsig scrolldown(void)
+static enum loopsig scrolldown(void)
 {
 	adjust_scroll(LINES / 2);
 	return LOOP_SIGCNT;
 }
 
-enum loopsig scrollup(void)
+static enum loopsig scrollup(void)
 {
 	adjust_scroll(-LINES / 2);
 	return LOOP_SIGCNT;
 }
 
-enum loopsig quitcmd(void)
+static enum loopsig quitcmd(void)
 {
 	return LOOP_SIGQUIT;
 }
@@ -142,7 +234,7 @@ enum loopsig quitcmd(void)
  * the process of refining the user's selection to the specific instance
  * that they are interested in.  We repeatedly ask for more input until
  * only one instance matches their inputs. */
-char *disamb(char c)
+static char *disamb(char c)
 {
 	int lvl = 0;
 	int off = 0;
@@ -165,7 +257,7 @@ char *disamb(char c)
  * empty buffer there's no choice but to start the buffer.  For all other
  * cases we ask the user for a character and start up the disambiguation
  * process. */
-char *hunt(void)
+static char *hunt(void)
 {
 	char c;
 	if (bufempty())
@@ -181,7 +273,7 @@ char *hunt(void)
 	return disamb(c);
 }
 
-enum loopsig insertcmd(void)
+static enum loopsig insertcmd(void)
 {
 	char *t;
 	mode = "TARGET (INSERT)";
@@ -193,7 +285,7 @@ enum loopsig insertcmd(void)
 	return LOOP_SIGCNT;
 }
 
-enum loopsig appendcmd(void)
+static enum loopsig appendcmd(void)
 {
 	char *t;
 	mode = "TARGET (APPEND)";
@@ -207,7 +299,7 @@ enum loopsig appendcmd(void)
 	return LOOP_SIGCNT;
 }
 
-enum loopsig writecmd(void)
+static enum loopsig writecmd(void)
 {
 	if (!bufwrite(filename)) {
 		clrscreen();
@@ -226,7 +318,7 @@ enum loopsig writecmd(void)
 /* We'll allow users to enter the start / end of ranged commands like delete
  * in either order.  orient flips the pointers so that the start always comes
  * before the end in the buffer. */
-void orient(char **start, char **end)
+static void orient(char **start, char **end)
 {
 	if (*end < *start) {
 		char *tmp = *end;
@@ -235,7 +327,7 @@ void orient(char **start, char **end)
 	}
 }
 
-void huntrange(struct range *result)
+static void huntrange(struct range *result)
 {
 	result->start = hunt();
 	if (result->start == NULL) {
@@ -253,7 +345,7 @@ void huntrange(struct range *result)
 	assert(result->start != NULL && result->end != NULL);
 }
 
-enum loopsig deletecmd(void)
+static enum loopsig deletecmd(void)
 {
 	mode = "TARGET (DELETE)";
 	struct range r;
@@ -268,7 +360,7 @@ enum loopsig deletecmd(void)
 	return LOOP_SIGCNT;
 }
 
-enum loopsig changecmd(void)
+static enum loopsig changecmd(void)
 {
 	struct range r;
 	mode = "TARGET (CHANGE)";
@@ -285,7 +377,7 @@ enum loopsig changecmd(void)
 	return LOOP_SIGCNT;
 }
 
-enum loopsig reloadcmd(void)
+static enum loopsig reloadcmd(void)
 {
 	bool ok = bufread(filename);
 	if (!ok)
@@ -298,7 +390,7 @@ enum loopsig reloadcmd(void)
  * is a problem.  `out` is the buffer to store the user's response in.
  * `out_sz` is how much space is allocated for the user's response.
  * `prompt` is displayed to the user. */
-bool queryuser(char *out, int out_sz, char *prompt)
+static bool queryuser(char *out, int out_sz, char *prompt)
 {
 	assert(out != NULL && out_sz > 0);
 	assert(prompt != NULL);
@@ -332,7 +424,7 @@ bool queryuser(char *out, int out_sz, char *prompt)
 	return false;
 }
 
-enum loopsig jumptolinecmd(void)
+static enum loopsig jumptolinecmd(void)
 {
 	mode = "JUMP";
 	clrscreen();
@@ -352,7 +444,7 @@ enum loopsig jumptolinecmd(void)
 
 /* orienti is similar to orient, but for integers.  This is useful for line
  * offsets. */
-void orienti(int *a, int *b)
+static void orienti(int *a, int *b)
 {
 	if (*b < *a) {
 		int tmp = *a;
@@ -361,15 +453,8 @@ void orienti(int *a, int *b)
 	}
 }
 
-struct linerange {
-	char *start;
-	char *end;
-};
-
-#define NULL_LINERANGE ((struct linerange) {.start = NULL, .end = NULL})
-
 /* Skips lines in the buffer.  This looks at buffer lines, not screen lines. */
-char *bufline(char *start, int lines)
+static char *bufline(char *start, int lines)
 {
 	for (int i = 0; i < lines; i++) {
 		start = endofline(start);
@@ -383,7 +468,7 @@ char *bufline(char *start, int lines)
  * huntline to get the start / end of the range.  Also guarantees the start
  * and end will be oriented properly, and returns NULL for both if there is a
  * problem with either. */
-struct linerange huntlinerange(void)
+static struct linerange huntlinerange(void)
 {
 	int startoffset = huntline();
 	if (startoffset == -1)
@@ -404,7 +489,7 @@ struct linerange huntlinerange(void)
 	return (struct linerange) {.start = start, .end = end};
 }
 
-enum loopsig deletelinescmd(void)
+static enum loopsig deletelinescmd(void)
 {
 	mode = "TARGET LINES (DELETE)";
 	struct linerange r = huntlinerange();
@@ -418,7 +503,7 @@ enum loopsig deletelinescmd(void)
 	return LOOP_SIGCNT;
 }
 
-enum loopsig changelinescmd(void)
+static enum loopsig changelinescmd(void)
 {
 	struct linerange r;
 	mode = "TARGET LINES (CHANGE)";
@@ -436,7 +521,7 @@ enum loopsig changelinescmd(void)
 }
 
 /* Draws line numbers on the screen until dismissed with a key press. */
-enum loopsig lineoverlaycmd(void)
+static enum loopsig lineoverlaycmd(void)
 {
 	clrscreen();
 	drawtext();
@@ -448,7 +533,7 @@ enum loopsig lineoverlaycmd(void)
 	return LOOP_SIGCNT;
 }
 
-enum loopsig yankcmd(void)
+static enum loopsig yankcmd(void)
 {
 	mode = "TARGET (YANK)";
 	struct range r;
@@ -459,7 +544,7 @@ enum loopsig yankcmd(void)
 	return LOOP_SIGCNT;
 }
 
-enum loopsig yanklinescmd(void)
+static enum loopsig yanklinescmd(void)
 {
 	mode = "TARGET LINES (YANK)";
 	struct linerange r = huntlinerange();
@@ -469,13 +554,8 @@ enum loopsig yanklinescmd(void)
 	return LOOP_SIGCNT;
 }
 
-struct yankstr {
-	char *start;
-	char *end;
-};
-
 /* Presents a menu for deciding which yanked string to use. */
-struct yankstr yankhunt(void)
+static struct yankstr yankhunt(void)
 {
 	clrscreen();
 	drawyanks();
@@ -490,7 +570,7 @@ struct yankstr yankhunt(void)
 	return result;
 }
 
-enum loopsig preputcmd(void)
+static enum loopsig preputcmd(void)
 {
 	mode = "TARGET (PRE-PUT)";
 	char *t = hunt();
@@ -512,7 +592,7 @@ enum loopsig preputcmd(void)
 	return LOOP_SIGCNT;
 }
 
-enum loopsig putcmd(void)
+static enum loopsig putcmd(void)
 {
 	mode = "TARGET (PUT)";
 	char *t = hunt();
@@ -535,7 +615,7 @@ enum loopsig putcmd(void)
 	return LOOP_SIGCNT;
 }
 
-enum loopsig insertlinecmd(void)
+static enum loopsig insertlinecmd(void)
 {
 	int lineno;
 	char *t;
@@ -556,7 +636,7 @@ enum loopsig insertlinecmd(void)
 	return LOOP_SIGCNT;
 }
 
-enum loopsig appendlinecmd(void)
+static enum loopsig appendlinecmd(void)
 {
 	int lineno;
 	char *lns, *lne;
@@ -576,7 +656,7 @@ enum loopsig appendlinecmd(void)
 	return LOOP_SIGCNT;
 }
 
-bool ranged_bang(char *start, char *end)
+static bool ranged_bang(char *start, char *end)
 {
 	char cmd[8192];
 	bool ok;
@@ -614,7 +694,7 @@ cleanup:
 	return ok;
 }
 
-enum loopsig bangcmd(void)
+static enum loopsig bangcmd(void)
 {
 	mode = "TARGET (SHELL)";
 	struct range r;
@@ -624,7 +704,7 @@ enum loopsig bangcmd(void)
 	return checksig(ranged_bang(r.start, r.end));
 }
 
-enum loopsig banglinescmd(void)
+static enum loopsig banglinescmd(void)
 {
 	mode = "TARGET (SHELL)";
 	struct linerange r = huntlinerange();
@@ -633,20 +713,20 @@ enum loopsig banglinescmd(void)
 	return checksig(ranged_bang(r.start, r.end));
 }
 
-enum loopsig togglewhitespacecmd(void)
+static enum loopsig togglewhitespacecmd(void)
 {
 	show_whitespace = show_whitespace ^ 1;
 	return LOOP_SIGCNT;
 }
 
-enum loopsig undocmd(void)
+static enum loopsig undocmd(void)
 {
 	undo();
 	refresh_bounds();
 	return LOOP_SIGCNT;
 }
 
-enum loopsig preputlinecmd(void)
+static enum loopsig preputlinecmd(void)
 {
 	char *t;
 	int l, ysz;
@@ -670,43 +750,7 @@ enum loopsig preputlinecmd(void)
 	return LOOP_SIGCNT;
 }
 
-/* The list of all commands.  Unused entries will be NULL.  A character
- * can be used as the index into this array to look up the appropriate
- * command. */
-command_fn cmdtbl[512] = {
-	[C_D] = scrolldown,
-	[KEY_DOWN] = scrolldown,
-	[KEY_NPAGE] = scrolldown,
-	['j'] = scrolldown,
-	[C_U] = scrollup,
-	[KEY_UP] = scrollup,
-	[KEY_PPAGE] = scrollup,
-	['k'] = scrollup,
-	['!'] = banglinescmd,
-	['1'] = bangcmd,
-	['A'] = appendlinecmd,
-	['C'] = changelinescmd,
-	['D'] = deletelinescmd,
-	['I'] = insertlinecmd,
-	['O'] = preputlinecmd,
-	['Y'] = yanklinescmd,
-	['a'] = appendcmd,
-	['c'] = changecmd,
-	['d'] = deletecmd,
-	['g'] = jumptolinecmd,
-	['i'] = insertcmd,
-	['n'] = lineoverlaycmd,
-	['o'] = preputcmd,
-	['p'] = putcmd,
-	['q'] = quitcmd,
-	['r'] = reloadcmd,
-	['s'] = togglewhitespacecmd,
-	['u'] = undocmd,
-	['w'] = writecmd,
-	['y'] = yankcmd,
-};
-
-int cmdloop(void)
+static int cmdloop(void)
 {
 	set_scroll(0);
 	for (;;) {
