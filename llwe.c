@@ -90,6 +90,7 @@ static enum loopsig banglinescmd(void);
 static enum loopsig togglewhitespacecmd(void);
 static enum loopsig undocmd(void);
 static enum loopsig preputlinecmd(void);
+static enum loopsig putlinecmd(void);
 static int cmdloop(void);
 
 static char *filename, *mode;
@@ -113,6 +114,7 @@ static command_fn cmdtbl[512] = {
 	['D'] = deletelinescmd,
 	['I'] = insertlinecmd,
 	['O'] = preputlinecmd,
+	['P'] = putlinecmd,
 	['Y'] = yanklinescmd,
 	['a'] = appendcmd,
 	['c'] = changecmd,
@@ -728,15 +730,44 @@ static enum loopsig undocmd(void)
 
 static enum loopsig preputlinecmd(void)
 {
+	struct yankstr y;
 	char *t;
 	int l, ysz;
-	mode = "TARGET (PREPUT LINE)";
+	mode = "TARGET LINES (PRE-PUT)";
 	l = huntline();
 	if (l < 0)
 		return LOOP_SIGCNT;
 	if (!(t = bufline(winstart(), l)))
 		return LOOP_SIGCNT;
-	struct yankstr y = yankhunt();
+	y = yankhunt();
+	if (!y.start || !y.end)
+		return LOOP_SIGCNT;
+	if (!bufinsertstr(y.start, y.end, t))
+		return LOOP_SIGERR;
+	ysz = y.end - y.start;
+	assert(ysz > 0);
+	if (recinsert(t, t + ysz) < 0)
+		return LOOP_SIGERR;
+	recstep();
+	refresh_bounds();
+	return LOOP_SIGCNT;
+}
+
+static enum loopsig putlinecmd(void)
+{
+	struct yankstr y;
+	char *t;
+	int l, ysz;
+	mode = "TARGET LINES (PUT)";
+	l = huntline();
+	if (l < 0)
+		return LOOP_SIGCNT;
+	if (!(t = bufline(winstart(), l)))
+		return LOOP_SIGCNT;
+	t = endofline(t);
+	if (t != getbufend())
+		t++;
+	y = yankhunt();
 	if (!y.start || !y.end)
 		return LOOP_SIGCNT;
 	if (!bufinsertstr(y.start, y.end, t))
