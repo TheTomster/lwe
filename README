@@ -28,23 +28,31 @@ Mirror: http://git.minbytes.com/llwe/
 
 Quick command reference:
 
-    j/C-d        scroll down
-    k/C-u        scroll up
-    q            quit
-    w            write file
-    r            reload file
-    i            insert
-    a            append
-    d            delete
-    c            change
-    g            goto line
-    D            delete lines
-    C            change lines
-    y            yank text
-    o            paste before
-    p            paste after
-    1            pipe text through shell command
-    !            pipe lines through shell command
+    j/C-d/down/pgdn  scroll down
+    k/C-u/up/pgup    scroll up
+    q                quit
+    w                write file
+    r                reload file
+    i                insert
+    I                insert before line
+    a                append
+    A                append after line
+    d                delete
+    c                change
+    g                goto line
+    D                delete lines
+    C                change lines
+    y                yank text
+    Y                yank lines
+    o                paste before
+    O                paste before line
+    p                paste after
+    P                paste after line
+    u                undo
+    1                pipe text through shell command
+    !                pipe lines through shell command
+    n                display line numbers
+    s                toggle show whitespace
 
 
 Compiling / Installing
