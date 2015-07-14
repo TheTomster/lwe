@@ -627,12 +627,10 @@ static enum loopsig insertlinecmd(void)
 		return LOOP_SIGCNT;
 	if(!(t = bufline(winstart(), lineno)))
 		return LOOP_SIGCNT;
-	if (t != getbufstart())
-		t--;
 	bufinsert('\n', t);
 	if (recinsert(t, t + 1) < 0)
 		return LOOP_SIGERR;
-	if (insertmode(filename, t + 1) < 0)
+	if (insertmode(filename, t) < 0)
 		return LOOP_SIGERR;
 	recstep();
 	return LOOP_SIGCNT;
