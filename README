@@ -32,7 +32,6 @@ Quick command reference:
     k/C-u/up/pgup    scroll up
     q                quit
     w                write file
-    r                reload file
     i                insert
     I                insert before line
     a                append
@@ -49,6 +48,7 @@ Quick command reference:
     p                paste after
     P                paste after line
     u                undo
+    r                redo
     1                pipe text through shell command
     !                pipe lines through shell command
     n                display line numbers
