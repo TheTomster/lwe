@@ -68,7 +68,6 @@ static void orient(char **start, char **end);
 static void huntrange(struct range *result);
 static enum loopsig deletecmd(void);
 static enum loopsig changecmd(void);
-static enum loopsig reloadcmd(void);
 static bool queryuser(char *out, int out_sz, char *prompt);
 static enum loopsig jumptolinecmd(void);
 static void orienti(int *a, int *b);
@@ -89,6 +88,7 @@ static enum loopsig bangcmd(void);
 static enum loopsig banglinescmd(void);
 static enum loopsig togglewhitespacecmd(void);
 static enum loopsig undocmd(void);
+static enum loopsig redocmd(void);
 static enum loopsig preputlinecmd(void);
 static enum loopsig putlinecmd(void);
 static int cmdloop(void);
@@ -125,7 +125,7 @@ static command_fn cmdtbl[512] = {
 	['o'] = preputcmd,
 	['p'] = putcmd,
 	['q'] = quitcmd,
-	['r'] = reloadcmd,
+	['r'] = redocmd,
 	['s'] = togglewhitespacecmd,
 	['u'] = undocmd,
 	['w'] = writecmd,
@@ -376,15 +376,6 @@ static enum loopsig changecmd(void)
 	if (insertmode(filename, r.start) < 0)
 		return LOOP_SIGERR;
 	recstep();
-	return LOOP_SIGCNT;
-}
-
-static enum loopsig reloadcmd(void)
-{
-	bool ok = bufread(filename);
-	if (!ok)
-		return LOOP_SIGERR;
-	refresh_bounds();
 	return LOOP_SIGCNT;
 }
 
@@ -721,7 +712,16 @@ static enum loopsig togglewhitespacecmd(void)
 
 static enum loopsig undocmd(void)
 {
-	undo();
+	if (undo() < 0)
+		return LOOP_SIGERR;
+	refresh_bounds();
+	return LOOP_SIGCNT;
+}
+
+static enum loopsig redocmd(void)
+{
+	if (redo() < 0)
+		return LOOP_SIGERR;
 	refresh_bounds();
 	return LOOP_SIGCNT;
 }
