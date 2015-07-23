@@ -4,5 +4,5 @@ int recinsert(char *start, char *end);
 int recdelete(char *start, char *end);
 void recstep(void);
 
-void undo(void);
-void redo(void);
+int undo(void);
+int redo(void);

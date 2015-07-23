@@ -29,7 +29,8 @@ static struct step *u, *uh, *r, *rh;
 static unsigned ua, ra; /* allocated size */
 
 static int checkalloc(struct step **l, struct step **h, unsigned *a);
-static void undosingle(void);
+static int undosingle(void);
+static int redosingle(void);
 static void resetr(void);
 static int storeins(struct step **l, struct step **h, unsigned *a,
                     unsigned s, char *start, char *end);
@@ -56,46 +57,54 @@ static int checkalloc(struct step **l, struct step **h, unsigned *a)
 	return 0;
 }
 
-static void undosingle()
+static int undosingle()
 {
 	char *st;
 	unsigned tsz;
 	st = getbufstart();
 	switch (uh->a) {
 	case INSERT:
-		storedel(&r, &rh, &ra, rs, st + uh->start, st + uh->end);
+		if (storedel(&r, &rh, &ra, rs, st + uh->start, st + uh->end) < 0)
+			return -1;
 		bufdelete(st + uh->start, st + uh->end);
 		break;
 	case DELETE:
 		tsz = uh->end - uh->start;
-		bufinsertstr(uh->text, uh->text + tsz, st + uh->start);
-		storeins(&r, &rh, &ra, rs, st + uh->start, st + uh->end);
+		if (!bufinsertstr(uh->text, uh->text + tsz, st + uh->start))
+			return -1;
+		if (storeins(&r, &rh, &ra, rs, st + uh->start, st + uh->end) < 0)
+			return -1;
 		break;
 	}
 	free(uh->text);
 	uh->text = NULL;
 	uh--;
+	return 0;
 }
 
-static void redosingle()
+static int redosingle()
 {
 	char *st;
 	unsigned tsz;
 	st = getbufstart();
 	switch (rh->a) {
 	case INSERT:
-		storedel(&u, &uh, &ua, us, st + rh->start, st + rh->end);
+		if (storedel(&u, &uh, &ua, us, st + rh->start, st + rh->end) < 0)
+			return -1;
 		bufdelete(st + rh->start, st + rh->end);
 		break;
 	case DELETE:
 		tsz = rh->end - rh->start;
-		bufinsertstr(rh->text, rh->text + tsz, st + rh->start);
-		storeins(&u, &uh, &ua, us, st + rh->start, st + rh->end);
+		if (bufinsertstr(rh->text, rh->text + tsz, st + rh->start) < 0)
+			return -1;
+		if (storeins(&u, &uh, &ua, us, st + rh->start, st + rh->end) < 0)
+			return -1;
 		break;
 	}
 	free(rh->text);
 	rh->text = NULL;
 	rh--;
+	return 0;
 }
 
 static void resetr()
@@ -172,22 +181,26 @@ void recstep()
 		us++;
 }
 
-void undo()
+int undo()
 {
 	if (us == 0)
-		return;
+		return 0;
 	us--;
 	while (uh && uh >= u && uh->s >= us)
-		undosingle();
+		if (undosingle() < 0)
+			return -1;
 	rs++;
+	return 0;
 }
 
-void redo()
+int redo()
 {
 	if (rs == 0)
-		return;
+		return 0;
 	rs--;
 	while (rh && rh >= r && rh->s >= rs)
-		redosingle();
+		if (redosingle() < 0)
+			return -1;
 	us++;
+	return 0;
 }

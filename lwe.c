@@ -712,14 +712,16 @@ static enum loopsig togglewhitespacecmd(void)
 
 static enum loopsig undocmd(void)
 {
-	undo();
+	if (undo() < 0)
+		return LOOP_SIGERR;
 	refresh_bounds();
 	return LOOP_SIGCNT;
 }
 
 static enum loopsig redocmd(void)
 {
-	redo();
+	if (redo() < 0)
+		return LOOP_SIGERR;
 	refresh_bounds();
 	return LOOP_SIGCNT;
 }
