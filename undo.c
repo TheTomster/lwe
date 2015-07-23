@@ -8,11 +8,7 @@
 #include "undo.h"
 #include "buffer.h"
 
-#if 0
-#define INIT_UNDO_SZ 8192
-#else
-#define INIT_UNDO_SZ 1
-#endif
+#define INIT_UNDO_SZ 128
 
 enum action {
 	INSERT,
