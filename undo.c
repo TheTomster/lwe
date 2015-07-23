@@ -44,15 +44,17 @@ static int storedel(struct step **l, struct step **h, unsigned *a,
 static int checkalloc(struct step **l, struct step **h, unsigned *a)
 {
 	struct step *new;
-	if (!*l || *h == *l + *a) {
+	if (!*l || *h == *l + *a - 1) {
 		if (*a > 0) {
-			*a = *a * 2;
+			*a *= 2;
 		} else {
 			*a = INIT_UNDO_SZ;
 		}
 		new = reallocarray(*l, *a, sizeof(**l));
 		if (!new)
 			return -1;
+		if (*h)
+			*h = new + (*h - *l);
 		*l = new;
 	}
 	return 0;
