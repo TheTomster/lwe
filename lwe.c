@@ -2,6 +2,7 @@
 #include <assert.h>
 #include <ctype.h>
 #include <curses.h>
+#include <regex.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -91,9 +92,13 @@ static enum loopsig undocmd(void);
 static enum loopsig redocmd(void);
 static enum loopsig preputlinecmd(void);
 static enum loopsig putlinecmd(void);
+static enum loopsig directionalsearch(int delta);
+static enum loopsig searchcmd(void);
+static enum loopsig rsearchcmd(void);
 static int cmdloop(void);
 
 static char *filename, *mode;
+static char current_search[8192];
 
 /* The list of all commands.  Unused entries will be NULL.  A character
  * can be used as the index into this array to look up the appropriate
@@ -130,6 +135,8 @@ static command_fn cmdtbl[512] = {
 	['u'] = undocmd,
 	['w'] = writecmd,
 	['y'] = yankcmd,
+	['/'] = searchcmd,
+	['?'] = rsearchcmd,
 };
 
 /* Finds the nth occurance of character c within the window.  Returns a
@@ -395,6 +402,7 @@ static bool queryuser(char *out, int out_sz, char *prompt)
 		snprintf(msgbuf, COLS, "%s: %.*s", prompt, COLS - plen - 2, out);
 		clrscreen();
 		drawtext();
+		draw_eof();
 		drawmessage(msgbuf);
 		present();
 		int c = getch();
@@ -777,6 +785,77 @@ static enum loopsig putlinecmd(void)
 	recstep();
 	refresh_bounds();
 	return LOOP_SIGCNT;
+}
+
+static enum loopsig directionalsearch(int delta)
+{
+	char rebuf[8192];
+	regex_t reg;
+	char *cpos, *spos, *e, *i;
+	int err, n;
+	if (!queryuser(rebuf, sizeof(rebuf), "/"))
+		return LOOP_SIGERR;
+	if (rebuf[0] != '\0')
+		strlcpy(current_search, rebuf, sizeof(current_search));
+	if ((err = regcomp(&reg, current_search, REG_EXTENDED)) != 0) {
+		regerror(err, &reg, current_search, sizeof(current_search));
+		clrscreen();
+		drawtext();
+		draw_eof();
+		drawmessage(current_search);
+		present();
+		getch();
+		return LOOP_SIGCNT;
+	}
+	spos = winstart();
+	if (delta > 0) {
+		cpos = endofline(spos);
+		if (cpos >= getbufend())
+			cpos = getbufstart();
+	} else {
+		if (spos == getbufstart())
+			cpos = getbufend();
+		else
+			cpos = spos - 1;
+	}
+	while (cpos != spos) {
+		e = endofline(cpos);
+		if (*e == '\n') {
+			*e = '\0';
+			err = regexec(&reg, cpos, 0, NULL, 0);
+			*e = '\n';
+		} else {
+			err = regexec(&reg, cpos, 0, NULL, 0);
+		}
+		if (!err)
+			break;
+		if (delta > 0) {
+			cpos = e + 1;
+			if (cpos >= getbufend())
+				cpos = getbufstart();
+		} else {
+			if (cpos == getbufstart())
+				cpos = getbufend();
+			else
+				cpos--;
+		}
+	}
+	regfree(&reg);
+	n = 0;
+	for (i = getbufstart(); i < cpos; ++i)
+		if (*i == '\n') n++;
+	set_scroll(n);
+	return LOOP_SIGCNT;
+}
+
+static enum loopsig searchcmd(void)
+{
+	return directionalsearch(1);
+}
+
+static enum loopsig rsearchcmd(void)
+{
+	return directionalsearch(-1);
 }
 
 static int cmdloop(void)
