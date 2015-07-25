@@ -92,6 +92,7 @@ static enum loopsig undocmd(void);
 static enum loopsig redocmd(void);
 static enum loopsig preputlinecmd(void);
 static enum loopsig putlinecmd(void);
+static enum loopsig directionalsearch(int delta);
 static enum loopsig searchcmd(void);
 static enum loopsig rsearchcmd(void);
 static int cmdloop(void);
@@ -786,7 +787,7 @@ static enum loopsig putlinecmd(void)
 	return LOOP_SIGCNT;
 }
 
-static enum loopsig searchcmd(void)
+static enum loopsig directionalsearch(int delta)
 {
 	char rebuf[8192];
 	regex_t reg;
@@ -807,9 +808,16 @@ static enum loopsig searchcmd(void)
 		return LOOP_SIGCNT;
 	}
 	spos = winstart();
-	cpos = endofline(spos);
-	if (cpos >= getbufend())
-		cpos = getbufstart();
+	if (delta > 0) {
+		cpos = endofline(spos);
+		if (cpos >= getbufend())
+			cpos = getbufstart();
+	} else {
+		if (spos == getbufstart())
+			cpos = getbufend();
+		else
+			cpos = spos - 1;
+	}
 	while (cpos != spos) {
 		e = endofline(cpos);
 		if (*e == '\n') {
@@ -821,9 +829,16 @@ static enum loopsig searchcmd(void)
 		}
 		if (!err)
 			break;
-		cpos = e + 1;
-		if (cpos >= getbufend())
-			cpos = getbufstart();
+		if (delta > 0) {
+			cpos = e + 1;
+			if (cpos >= getbufend())
+				cpos = getbufstart();
+		} else {
+			if (cpos == getbufstart())
+				cpos = getbufend();
+			else
+				cpos--;
+		}
 	}
 	regfree(&reg);
 	n = 0;
@@ -833,9 +848,14 @@ static enum loopsig searchcmd(void)
 	return LOOP_SIGCNT;
 }
 
+static enum loopsig searchcmd(void)
+{
+	return directionalsearch(1);
+}
+
 static enum loopsig rsearchcmd(void)
 {
-	return LOOP_SIGCNT;
+	return directionalsearch(-1);
 }
 
 static int cmdloop(void)
