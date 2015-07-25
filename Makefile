@@ -1,6 +1,5 @@
 CFLAGS = -O0 -g -Wall -Wextra -pedantic -Werror -std=c99 -pipe
 LDLIBS = -lcurses
-# LDLIBS = -lcurses -lbsd
 
 OBJS = lwe.o err.o buffer.o draw.o yank.o bang.o undo.o insert.o
 
