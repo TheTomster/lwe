@@ -362,6 +362,7 @@ static enum loopsig deletecmd(void)
 	if (!r.start || !r.end)
 		return LOOP_SIGCNT;
 	yank_store(r.start, r.end);
+	saveyanks();
 	if (recdelete(r.start, r.end) < 0)
 		return LOOP_SIGERR;
 	recstep();
@@ -377,6 +378,7 @@ static enum loopsig changecmd(void)
 	if (!r.start || !r.end)
 		return LOOP_SIGCNT;
 	yank_store(r.start, r.end);
+	saveyanks();
 	if (recdelete(r.start, r.end) < 0)
 		return LOOP_SIGERR;
 	delete(r.start, r.end);
@@ -497,6 +499,7 @@ static enum loopsig deletelinescmd(void)
 	if (!r.start || !r.end)
 		return LOOP_SIGCNT;
 	yank_store(r.start, r.end);
+	saveyanks();
 	if (recdelete(r.start, r.end) < 0)
 		return LOOP_SIGERR;
 	recstep();
@@ -512,6 +515,7 @@ static enum loopsig changelinescmd(void)
 	if (!r.start || !r.end)
 		return LOOP_SIGCNT;
 	yank_store(r.start, r.end);
+	saveyanks();
 	if (recdelete(r.start, r.end) < 0)
 		return LOOP_SIGERR;
 	delete(r.start, r.end);
@@ -542,6 +546,7 @@ static enum loopsig yankcmd(void)
 	if (!r.start || !r.end)
 		return LOOP_SIGCNT;
 	yank_store(r.start, r.end);
+	saveyanks();
 	return LOOP_SIGCNT;
 }
 
@@ -552,6 +557,7 @@ static enum loopsig yanklinescmd(void)
 	if (!r.start || !r.end)
 		return LOOP_SIGCNT;
 	yank_store(r.start, r.end);
+	saveyanks();
 	return LOOP_SIGCNT;
 }
 
@@ -675,6 +681,7 @@ static bool ranged_bang(char *start, char *end)
 		goto cleanup;
 	}
 	yank_store(start, end);
+	saveyanks();
 	if (recdelete(start, end) < 0) {
 		ok = false;
 		goto cleanup;
