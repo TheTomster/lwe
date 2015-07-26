@@ -1,6 +1,7 @@
 /* (C) 2015 Tom Wright */
 
 #include <assert.h>
+#include <fcntl.h>
 #include <pwd.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -17,6 +18,7 @@ static unsigned yank_sizes[N_YANKS];
 static char *yank_buffers[N_YANKS];
 
 static void shiftyanks(void);
+static int yank_filename(char buf[8192]);
 
 /*
  * Yanked text is stored in malloc'd buffers.  The yanks array is an
@@ -34,22 +36,33 @@ static void shiftyanks()
 			sizeof(yank_sizes[0]) * LAST_YANK);
 }
 
-int saveyanks()
+static int yank_filename(char filename[8192])
 {
-	char filename[8192];
 	struct passwd *pwd;
-	FILE *f;
-	size_t w;
-	int i, err;
 	uid_t u;
 	u = getuid();
 	if (!(pwd = getpwuid(u)))
 		return -1;
-	strlcpy(filename, YANK_FILE, sizeof(filename));
-	strlcat(filename, pwd->pw_name, sizeof(filename));
+	strlcpy(filename, YANK_FILE, 8192);
+	strlcat(filename, pwd->pw_name, 8192);
+	return 0;
+}
+
+int saveyanks()
+{
+	char filename[8192];
+	FILE *f;
+	size_t w;
+	int i, err;
+	if (yank_filename(filename) < 0)
+		return -1;
 	if (!(f = fopen(filename, "w")))
 		return -1;
 	err = 0;
+	if (flock(fileno(f), LOCK_EX) < 0) {
+		err = -1;
+		goto close;
+	}
 	for (i = 0; i < N_YANKS; i++) {
 		if (yank_buffers[i] == NULL)
 			break;
@@ -74,7 +87,48 @@ int saveyanks()
 
 int loadyanks()
 {
-	return -1;
+	char filename[8192];
+	char line[256];
+	char *new;
+	FILE *f;
+	int i, err;
+	unsigned sz;
+	if (yank_filename(filename) < 0)
+		return -1;
+	if (!(f = fopen(filename, "r")))
+		return -1;
+	err = 0;
+	if (flock(fileno(f), LOCK_EX) < 0) {
+		err = -1;
+		goto close;
+	}
+	i = 0;
+	do {
+		if (!fgets(line, sizeof(line), f)) {
+			err = -1;
+			goto close;
+		}
+		if (!sscanf(line, " %u ", &sz)) {
+			err = -1;
+			goto close;
+		}
+		yank_sizes[i] = sz;
+		new = realloc(yank_buffers[i], sz);
+		if (!new) {
+			err = -1;
+			goto close;
+		}
+		yank_buffers[i] = new;
+		if (fread(yank_buffers[i], sizeof(char), sz, f) < sz) {
+			err = -1;
+			goto close;
+		}
+		fgetc(f);
+		i++;
+	} while (i < N_YANKS && !feof(f));
+	close:
+	fclose(f);
+	return err;
 }
 
 /*
@@ -94,7 +148,7 @@ int yank_sz()
  * location pointed to by item, and the length is stored in the location
  * pointed to by len.  n should be in the interval [0, yank_sz).
  */
-void yank_item(char **item, int *len, int n)
+void yank_item(char **item, unsigned *len, int n)
 {
 	assert(n >= 0);
 	assert(n < yank_sz());

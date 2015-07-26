@@ -564,6 +564,7 @@ static enum loopsig yanklinescmd(void)
 /* Presents a menu for deciding which yanked string to use. */
 static struct yankstr yankhunt(void)
 {
+	loadyanks();
 	clrscreen();
 	drawyanks();
 	present();
@@ -571,7 +572,7 @@ static struct yankstr yankhunt(void)
 	if (selected < 0 || selected >= yank_sz())
 		return (struct yankstr) {NULL, NULL};
 	struct yankstr result;
-	int ysz;
+	unsigned ysz;
 	yank_item(&result.start, &ysz, selected);
 	result.end = result.start + ysz;
 	return result;
@@ -896,6 +897,7 @@ int main(int argc, char **argv)
 		seterr("missing file arg");
 	} else {
 		filename = argv[1];
+		loadyanks();
 		if (bufread(filename))
 			cmdloop();
 	}
