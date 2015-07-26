@@ -308,20 +308,22 @@ void drawmessage(char *msg)
 
 void drawyanks()
 {
-	int nyanks = yank_sz();
-	int linestodraw = nyanks < LINES ? nyanks : LINES;
-	for (int i = 0; i < linestodraw; i++) {
+	char *ytext;
+	unsigned lines, nyanks, linestodraw, ysz, previewsz, i, j;
+	char c;
+	nyanks = yank_sz();
+	lines = LINES;
+	linestodraw = nyanks < lines ? nyanks : lines;
+	for (i = 0; i < linestodraw; i++) {
 		attron(A_STANDOUT);
 		mvaddch(i, 0, 'a' + i);
 		attroff(A_STANDOUT);
-		char *ytext;
-		int ysz;
 		yank_item(&ytext, &ysz, i);
-		int previewsz = COLS - 2;
-		char preview[previewsz];
-		snprintf(preview, previewsz, "%s", ytext);
-		for (int j = 0; j < ysz && j < previewsz; j++) {
-			char c = preview[j];
+		previewsz = COLS - 2;
+		if (ysz < previewsz)
+			previewsz = ysz;
+		for (j = 0; j < previewsz; j++) {
+			c = ytext[j];
 			c = (isgraph(c) || c == ' ') ? c : '?';
 			addch(c);
 		}
