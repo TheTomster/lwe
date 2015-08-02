@@ -10,5 +10,4 @@ char *getbufend(void);
 
 #define inbuf(p) (p >= getbufstart() && p <= getbufend())
 
-char *startofline(int off);
 char *endofline(char *p);
