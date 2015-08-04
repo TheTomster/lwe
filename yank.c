@@ -43,8 +43,7 @@ static int yank_filename(char filename[8192])
 	u = getuid();
 	if (!(pwd = getpwuid(u)))
 		return -1;
-	strlcpy(filename, YANK_FILE, 8192);
-	strlcat(filename, pwd->pw_name, 8192);
+	snprintf(filename, 8192, "%s%s", YANK_FILE, pwd->pw_name);
 	return 0;
 }
 
