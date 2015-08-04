@@ -804,7 +804,7 @@ static enum loopsig directionalsearch(int delta)
 	if (!queryuser(rebuf, sizeof(rebuf), "/"))
 		return LOOP_SIGERR;
 	if (rebuf[0] != '\0')
-		strlcpy(current_search, rebuf, sizeof(current_search));
+		snprintf(current_search, sizeof(current_search), "%s", rebuf);
 	if ((err = regcomp(&reg, current_search, REG_EXTENDED)) != 0) {
 		regerror(err, &reg, current_search, sizeof(current_search));
 		clrscreen();
