@@ -19,7 +19,7 @@ clean:
 
 lwe: ${OBJS}
 	@echo LD $@
-	@${CC} ${CFLAGS} ${LDFLAGS} -o $@ ${OBJS} ${LDLIBS}
+	@${CC} ${CFLAGS} -o $@ ${OBJS} ${LDFLAGS}
 
 draw.o: buffer.h draw.h yank.h
 buffer.o: err.h buffer.h
