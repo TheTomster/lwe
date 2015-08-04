@@ -168,7 +168,11 @@ void initcurses()
 	nonl();
 	intrflush(stdscr, FALSE);
 	keypad(stdscr, TRUE);
-	ESCDELAY = 200;
+#if NCURSES_REENTRANT
+	set_escdelay(25);
+#else
+	ESCDELAY = 25;
+#endif
 }
 
 static void advcursor(char c)
