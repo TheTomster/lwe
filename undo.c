@@ -47,7 +47,7 @@ static int checkalloc(struct step **l, struct step **h, unsigned *a)
 		} else {
 			*a = INIT_UNDO_SZ;
 		}
-		new = reallocarray(*l, *a, sizeof(**l));
+		new = realloc(*l, *a * sizeof(**l));
 		if (!new)
 			return -1;
 		if (*h)
