@@ -1,20 +1,25 @@
-CFLAGS = -O0 -g -Wall -Wextra -pedantic -Werror -std=c99 -pipe
-LDLIBS = -lcurses
+include config.mk
 
 OBJS = lwe.o err.o buffer.o draw.o yank.o bang.o undo.o insert.o
 
-all: lwe
+all: options lwe
+
+options:
+	@echo "build options (adjust in config.mk if needed)"
+	@echo "CFLAGS   = ${CFLAGS}"
+	@echo "LDFLAGS  = ${LDFLAGS}"
+	@echo "CC       = ${CC}"
 
 clean:
 	@rm -f *.o lwe
 
 .c.o:
-	@echo CC $<
-	@$(CC) -c $(CFLAGS) $<
+	@echo CC -o $@
+	@${CC} -c ${CFLAGS} $<
 
-lwe: $(OBJS)
+lwe: ${OBJS}
 	@echo LD $@
-	@$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $(OBJS) $(LDLIBS)
+	@${CC} ${CFLAGS} ${LDFLAGS} -o $@ ${OBJS} ${LDLIBS}
 
 draw.o: buffer.h draw.h yank.h
 buffer.o: err.h buffer.h
@@ -24,4 +29,4 @@ bang.o: bang.h err.h
 undo.o: undo.h buffer.h
 insert.o: insert.h buffer.h draw.h undo.h
 
-.PHONY: all clean
+.PHONY: all options clean
