@@ -113,7 +113,15 @@ bool bufinsertstr(char *start, char *end, char *t)
 {
 	assert(inbuf(t));
 	assert(end >= start);
-	for (char *i = start; i < end; i++)
+	char *i;
+	unsigned o;
+	o = t - getbufstart();
+	if (overalloc_sz() < (end - start)) {
+		if (!bufextend())
+			return false;
+	}
+	t = getbufstart() + o;
+	for (i = start; i < end; i++)
 		if (!bufinsert(*i, t++))
 			return false;
 	return true;
