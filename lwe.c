@@ -3,7 +3,6 @@
 #include <ctype.h>
 #include <curses.h>
 #include <regex.h>
-#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -52,7 +51,7 @@ struct yankstr {
 
 static char *find(char c, int n);
 static int disambget(int lvl, int off, int n);
-static bool lineselected(int lvl, int off);
+static int lineselected(int lvl, int off);
 static int getoffset(int lvl, int off);
 static int huntline(void);
 static void delete(char *start, char *end);
@@ -68,7 +67,7 @@ static void orient(char **start, char **end);
 static void huntrange(struct range *result);
 static enum loopsig deletecmd(void);
 static enum loopsig changecmd(void);
-static bool queryuser(char *out, int out_sz, char *prompt);
+static int queryuser(char *out, int out_sz, char *prompt);
 static enum loopsig jumptolinecmd(void);
 static void orienti(int *a, int *b);
 static char *bufline(char *start, int lines);
@@ -163,7 +162,7 @@ static int disambget(int lvl, int off, int n)
  * given lvl and offset.  Since there could be more than 26 lines on
  * screen we have to perform disambiguation, and this function tells us
  * when to stop. */
-static bool lineselected(int lvl, int off)
+static int lineselected(int lvl, int off)
 {
 	/* Checks if the 2nd match would be off screen. */
 	return disambget(lvl, off, 1) > LINES;
@@ -380,11 +379,11 @@ static enum loopsig changecmd(void)
 	return LOOP_SIGCNT;
 }
 
-/* Queries the user for a string.  Returns true on success, false if there
+/* Queries the user for a string.  Returns 0 on succes, -1 if there
  * is a problem.  `out` is the buffer to store the user's response in.
  * `out_sz` is how much space is allocated for the user's response.
  * `prompt` is displayed to the user. */
-static bool queryuser(char *out, int out_sz, char *prompt)
+static int queryuser(char *out, int out_sz, char *prompt)
 {
 	assert(out != NULL && out_sz > 0);
 	assert(prompt != NULL);
@@ -401,7 +400,7 @@ static bool queryuser(char *out, int out_sz, char *prompt)
 		present();
 		int c = getch();
 		if (c == '\r') {
-			return true;
+			return 0;
 		} else if (c == KEY_BACKSPACE || c == 127) {
 			i--;
 			out[i] = '\0';
@@ -416,7 +415,7 @@ static bool queryuser(char *out, int out_sz, char *prompt)
 	drawtext();
 	drawmessage("Input too long");
 	getch();
-	return false;
+	return -1;
 }
 
 static enum loopsig jumptolinecmd(void)
@@ -661,7 +660,7 @@ static int ranged_bang(char *start, char *end)
 	int err;
 	struct bang_output o;
 	struct bang_output e;
-	if (!queryuser(cmd, sizeof(cmd), "COMMAND")) {
+	if (queryuser(cmd, sizeof(cmd), "COMMAND") < 0) {
 		return -1;
 	}
 	if (bang(&o, &e, cmd, start, end - start) < 0) {
@@ -802,7 +801,7 @@ static enum loopsig directionalsearch(int delta)
 	regex_t reg;
 	char *cpos, *spos, *e, *i;
 	int err, n;
-	if (!queryuser(rebuf, sizeof(rebuf), "/"))
+	if (queryuser(rebuf, sizeof(rebuf), "/") < 0)
 		return LOOP_SIGERR;
 	if (rebuf[0] != '\0')
 		snprintf(current_search, sizeof(current_search), "%s", rebuf);

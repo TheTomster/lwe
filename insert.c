@@ -1,6 +1,5 @@
 #include <curses.h>
 #include <ctype.h>
-#include <stdbool.h>
 
 #include "buffer.h"
 #include "draw.h"

@@ -1,7 +1,6 @@
 /* (C) 2015 Tom Wright */
 
 #include <assert.h>
-#include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
 
