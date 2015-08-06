@@ -902,7 +902,7 @@ int main(int argc, char **argv)
 	} else {
 		filename = argv[1];
 		loadyanks();
-		if (bufread(filename))
+		if (bufread(filename) == 0)
 			cmdloop();
 	}
 
