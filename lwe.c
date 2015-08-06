@@ -310,7 +310,7 @@ static enum loopsig appendcmd(void)
 
 static enum loopsig writecmd(void)
 {
-	if (!bufwrite(filename)) {
+	if (bufwrite(filename) < 0) {
 		clrscreen();
 		drawtext();
 		draw_eof();
@@ -588,8 +588,7 @@ static enum loopsig preputcmd(void)
 	struct yankstr y = yankhunt();
 	if (!y.start || !y.end)
 		return LOOP_SIGCNT;
-	bool ok = bufinsertstr(y.start, y.end, t);
-	if (!ok)
+	if (bufinsertstr(y.start, y.end, t) > 0)
 		return LOOP_SIGERR;
 	ysz = y.end - y.start;
 	assert(ysz > 0);
@@ -611,8 +610,7 @@ static enum loopsig putcmd(void)
 	struct yankstr y = yankhunt();
 	if (y.start == NULL || y.end == NULL)
 		return LOOP_SIGCNT;
-	bool ok = bufinsertstr(y.start, y.end, t);
-	if (!ok)
+	if (bufinsertstr(y.start, y.end, t) < 0)
 		return LOOP_SIGERR;
 	int ysz = y.end - y.start;
 	assert(ysz > 0);
@@ -633,7 +631,8 @@ static enum loopsig insertlinecmd(void)
 		return LOOP_SIGCNT;
 	if(!(t = bufline(winstart(), lineno)))
 		return LOOP_SIGCNT;
-	bufinsert('\n', t);
+	if (bufinsert('\n', t) < 0)
+		return LOOP_SIGERR;
 	if (recinsert(t, t + 1) < 0)
 		return LOOP_SIGERR;
 	if (insertmode(filename, t) < 0)
@@ -654,8 +653,10 @@ static enum loopsig appendlinecmd(void)
 	if(lns == NULL)
 		return LOOP_SIGCNT;
 	lne = endofline(lns);
-	bufinsert('\n', lne);
-	recinsert(lne, lne + 1);
+	if (bufinsert('\n', lne) < 0)
+		return LOOP_SIGERR;
+	if (recinsert(lne, lne + 1) < 0)
+		return LOOP_SIGERR;
 	if (insertmode(filename, lne + 1) < 0)
 		return LOOP_SIGERR;
 	recstep();
@@ -688,7 +689,10 @@ static bool ranged_bang(char *start, char *end)
 		goto cleanup;
 	}
 	bufdelete(start, end);
-	bufinsertstr(o.buf, o.buf + o.sz, start);
+	if (bufinsertstr(o.buf, o.buf + o.sz, start) < 0) {
+		ok = false;
+		goto cleanup;
+	}
 	if (recinsert(start, start + o.sz) < 0) {
 		ok = false;
 		goto cleanup;
@@ -756,7 +760,7 @@ static enum loopsig preputlinecmd(void)
 	y = yankhunt();
 	if (!y.start || !y.end)
 		return LOOP_SIGCNT;
-	if (!bufinsertstr(y.start, y.end, t))
+	if (bufinsertstr(y.start, y.end, t) < 0)
 		return LOOP_SIGERR;
 	ysz = y.end - y.start;
 	assert(ysz > 0);
@@ -784,7 +788,7 @@ static enum loopsig putlinecmd(void)
 	y = yankhunt();
 	if (!y.start || !y.end)
 		return LOOP_SIGCNT;
-	if (!bufinsertstr(y.start, y.end, t))
+	if (bufinsertstr(y.start, y.end, t) < 0)
 		return LOOP_SIGERR;
 	ysz = y.end - y.start;
 	assert(ysz > 0);

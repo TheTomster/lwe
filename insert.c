@@ -85,7 +85,7 @@ int insertmode(char *filename, char *t)
 			continue;
 		}
 		i = t - getbufstart();
-		if (!bufinsert(c, t))
+		if (bufinsert(c, t) < 0)
 			return -1;
 		t = getbufstart() + i;
 		if (recinsert(t, t + 1) < 0)

@@ -2,7 +2,6 @@
 
 #include <assert.h>
 #include <errno.h>
-#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -14,12 +13,59 @@
 static char *buffer;
 static int allocatedsz, contentsz;
 
-static bool initbuf(int sz);
-static bool filetobuf(char *path, int sz);
+static int initbuf(int sz);
+static int filetobuf(char *path, int sz);
 static int overalloc_sz(void);
-static bool bufextend(void);
+static int bufextend(void);
 
-bool bufread(char *path)
+static int initbuf(int sz)
+{
+	allocatedsz = sz + 4096;
+	contentsz = 0;
+	buffer = malloc(allocatedsz);
+	if (buffer == NULL) {
+		seterr("memory");
+		return -1;
+	}
+	return 0;
+}
+
+static int filetobuf(char *path, int sz)
+{
+	FILE *f = fopen(path, "r");
+	if (f == NULL) {
+		seterr("read");
+		return -1;
+	}
+	int readsz = fread(buffer, 1, sz, f);
+	if (readsz != sz) {
+		seterr("read");
+		fclose(f);
+		return -1;
+	}
+	contentsz += sz;
+	fclose(f);
+	return 0;
+}
+
+static int overalloc_sz(void)
+{
+	return allocatedsz - contentsz;
+}
+
+static int bufextend(void)
+{
+	int newsize = allocatedsz * 2;
+	buffer = realloc(buffer, newsize);
+	if (buffer == NULL) {
+		seterr("memory");
+		return -1;
+	}
+	allocatedsz = newsize;
+	return 0;
+}
+
+int bufread(char *path)
 {
 	if (buffer != NULL)
 		free(buffer);
@@ -27,71 +73,28 @@ bool bufread(char *path)
 	errno = 0;
 	stat(path, &st);
 	if (errno == 0) {
-		bool ok = initbuf(st.st_size);
-		if (!ok)
-			return false;
+		if (initbuf(st.st_size) < 0)
+			return -1;
 		return filetobuf(path, st.st_size);
 	} else if (errno == ENOENT) {
 		return initbuf(0);
 	} else {
 		seterr(strerror(errno));
-		return false;
+		return -1;
 	}
 }
 
-static bool initbuf(int sz)
-{
-	allocatedsz = sz + 4096;
-	contentsz = 0;
-	buffer = malloc(allocatedsz);
-	if (buffer == NULL) {
-		seterr("memory");
-		return false;
-	}
-	return true;
-}
-
-static bool filetobuf(char *path, int sz)
-{
-	FILE *f = fopen(path, "r");
-	if (f == NULL) {
-		seterr("read");
-		return false;
-	}
-	int readsz = fread(buffer, 1, sz, f);
-	if (readsz != sz) {
-		seterr("read");
-		fclose(f);
-		return false;
-	}
-	contentsz += sz;
-	fclose(f);
-	return true;
-}
-
-bool bufwrite(char *path)
+int bufwrite(char *path)
 {
 	FILE *f = fopen(path, "w");
 	if (f == NULL)
-		return false;
+		return -1;
 	fwrite(buffer, 1, contentsz, f);
 	fclose(f);
-	return true;
+	return 0;
 }
 
-static bool bufextend(void)
-{
-	int newsize = allocatedsz * 2;
-	buffer = realloc(buffer, newsize);
-	if (buffer == NULL) {
-		seterr("memory");
-		return false;
-	}
-	allocatedsz = newsize;
-	return true;
-}
-
-bool bufinsert(char c, char *t)
+int bufinsert(char c, char *t)
 {
 	assert(overalloc_sz() > 0);
 	int sztomove = contentsz - (t - buffer);
@@ -101,15 +104,10 @@ bool bufinsert(char c, char *t)
 	if (overalloc_sz() == 0)
 		return bufextend();
 	else
-		return true;
+		return 0;
 }
 
-static int overalloc_sz(void)
-{
-	return allocatedsz - contentsz;
-}
-
-bool bufinsertstr(char *start, char *end, char *t)
+int bufinsertstr(char *start, char *end, char *t)
 {
 	assert(inbuf(t));
 	assert(end >= start);
@@ -118,13 +116,13 @@ bool bufinsertstr(char *start, char *end, char *t)
 	o = t - getbufstart();
 	if (overalloc_sz() < (end - start)) {
 		if (!bufextend())
-			return false;
+			return -1;
 	}
 	t = getbufstart() + o;
 	for (i = start; i < end; i++)
-		if (!bufinsert(*i, t++))
-			return false;
-	return true;
+		if (bufinsert(*i, t++) < 0)
+			return -1;
+	return 0;
 }
 
 void bufdelete(char *start, char *end)

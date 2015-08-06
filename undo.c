@@ -70,7 +70,7 @@ static int undosingle()
 		break;
 	case DELETE:
 		tsz = uh->end - uh->start;
-		if (!bufinsertstr(uh->text, uh->text + tsz, st + uh->start))
+		if (bufinsertstr(uh->text, uh->text + tsz, st + uh->start) < 0)
 			return -1;
 		if (storeins(&r, &rh, &ra, rs, st + uh->start, st + uh->end) < 0)
 			return -1;
