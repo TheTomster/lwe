@@ -94,35 +94,36 @@ int bufwrite(char *path)
 	return 0;
 }
 
-int bufinsert(char c, char *t)
+char *bufinsert(char c, char *t)
 {
+	size_t sztomove;
+	unsigned o;
+	assert(inbuf(t));
 	assert(overalloc_sz() > 0);
-	int sztomove = contentsz - (t - buffer);
+	o = t - buffer;
+	sztomove = contentsz - o;
 	memmove(t + 1, t, sztomove);
 	*t = c;
 	contentsz++;
-	if (overalloc_sz() == 0)
-		return bufextend();
-	else
-		return 0;
+	if (overalloc_sz() == 0) {
+		if (bufextend() < 0)
+			return NULL;
+		else
+			return buffer + o;
+	} else {
+		return t;
+	}
 }
 
-int bufinsertstr(char *start, char *end, char *t)
+char *bufinsertstr(char *start, char *end, char *t)
 {
+	char *i;
 	assert(inbuf(t));
 	assert(end >= start);
-	char *i;
-	unsigned o;
-	o = t - getbufstart();
-	if (overalloc_sz() < (end - start)) {
-		if (!bufextend())
-			return -1;
-	}
-	t = getbufstart() + o;
 	for (i = start; i < end; i++)
-		if (bufinsert(*i, t++) < 0)
-			return -1;
-	return 0;
+		if (!(t = bufinsert(*i, t)))
+			return t;
+	return t;
 }
 
 void bufdelete(char *start, char *end)

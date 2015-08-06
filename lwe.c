@@ -588,7 +588,7 @@ static enum loopsig preputcmd(void)
 	struct yankstr y = yankhunt();
 	if (!y.start || !y.end)
 		return LOOP_SIGCNT;
-	if (bufinsertstr(y.start, y.end, t) > 0)
+	if (!(t = bufinsertstr(y.start, y.end, t)))
 		return LOOP_SIGERR;
 	ysz = y.end - y.start;
 	assert(ysz > 0);
@@ -610,7 +610,7 @@ static enum loopsig putcmd(void)
 	struct yankstr y = yankhunt();
 	if (y.start == NULL || y.end == NULL)
 		return LOOP_SIGCNT;
-	if (bufinsertstr(y.start, y.end, t) < 0)
+	if (!(t = bufinsertstr(y.start, y.end, t)))
 		return LOOP_SIGERR;
 	int ysz = y.end - y.start;
 	assert(ysz > 0);
@@ -631,7 +631,7 @@ static enum loopsig insertlinecmd(void)
 		return LOOP_SIGCNT;
 	if(!(t = bufline(winstart(), lineno)))
 		return LOOP_SIGCNT;
-	if (bufinsert('\n', t) < 0)
+	if (!(t = bufinsert('\n', t)))
 		return LOOP_SIGERR;
 	if (recinsert(t, t + 1) < 0)
 		return LOOP_SIGERR;
@@ -653,7 +653,7 @@ static enum loopsig appendlinecmd(void)
 	if(lns == NULL)
 		return LOOP_SIGCNT;
 	lne = endofline(lns);
-	if (bufinsert('\n', lne) < 0)
+	if (!(lne = bufinsert('\n', lne)))
 		return LOOP_SIGERR;
 	if (recinsert(lne, lne + 1) < 0)
 		return LOOP_SIGERR;
@@ -689,7 +689,7 @@ static bool ranged_bang(char *start, char *end)
 		goto cleanup;
 	}
 	bufdelete(start, end);
-	if (bufinsertstr(o.buf, o.buf + o.sz, start) < 0) {
+	if (!(start = bufinsertstr(o.buf, o.buf + o.sz, start))) {
 		ok = false;
 		goto cleanup;
 	}
@@ -760,7 +760,7 @@ static enum loopsig preputlinecmd(void)
 	y = yankhunt();
 	if (!y.start || !y.end)
 		return LOOP_SIGCNT;
-	if (bufinsertstr(y.start, y.end, t) < 0)
+	if (!(t = bufinsertstr(y.start, y.end, t)))
 		return LOOP_SIGERR;
 	ysz = y.end - y.start;
 	assert(ysz > 0);
@@ -788,7 +788,7 @@ static enum loopsig putlinecmd(void)
 	y = yankhunt();
 	if (!y.start || !y.end)
 		return LOOP_SIGCNT;
-	if (bufinsertstr(y.start, y.end, t) < 0)
+	if (!(t = bufinsertstr(y.start, y.end, t)))
 		return LOOP_SIGERR;
 	ysz = y.end - y.start;
 	assert(ysz > 0);

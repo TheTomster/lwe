@@ -48,7 +48,6 @@ static int ruboutword(char **t)
 int insertmode(char *filename, char *t)
 {
 	int c;
-	unsigned i;
 	for (;;) {
 		refresh_bounds();
 		if (t > winend())
@@ -84,10 +83,8 @@ int insertmode(char *filename, char *t)
 		if (!isgraph(c) && !isspace(c)) {
 			continue;
 		}
-		i = t - getbufstart();
-		if (bufinsert(c, t) < 0)
+		if (!(t = bufinsert(c, t)))
 			return -1;
-		t = getbufstart() + i;
 		if (recinsert(t, t + 1) < 0)
 			return -1;
 		else
