@@ -56,7 +56,6 @@ static bool lineselected(int lvl, int off);
 static int getoffset(int lvl, int off);
 static int huntline(void);
 static void delete(char *start, char *end);
-static enum loopsig checksig(bool ok);
 static enum loopsig scrolldown(void);
 static enum loopsig scrollup(void);
 static enum loopsig quitcmd(void);
@@ -84,7 +83,7 @@ static enum loopsig preputcmd(void);
 static enum loopsig putcmd(void);
 static enum loopsig insertlinecmd(void);
 static enum loopsig appendlinecmd(void);
-static bool ranged_bang(char *start, char *end);
+static int ranged_bang(char *start, char *end);
 static enum loopsig bangcmd(void);
 static enum loopsig banglinescmd(void);
 static enum loopsig togglewhitespacecmd(void);
@@ -212,13 +211,6 @@ static void delete(char *start, char *end)
 {
 	bufdelete(start, end);
 	refresh_bounds();
-}
-
-/* Convenience function for checking a boolean result.  On true we continue
- * the main loop, on false we error. */
-static enum loopsig checksig(bool ok)
-{
-	return ok ? LOOP_SIGCNT : LOOP_SIGERR;
 }
 
 static enum loopsig scrolldown(void)
@@ -663,38 +655,37 @@ static enum loopsig appendlinecmd(void)
 	return LOOP_SIGCNT;
 }
 
-static bool ranged_bang(char *start, char *end)
+static int ranged_bang(char *start, char *end)
 {
 	char cmd[8192];
-	bool ok;
-	ok = queryuser(cmd, sizeof(cmd), "COMMAND");
-	if (!ok) {
-		return true;
-	}
+	int err;
 	struct bang_output o;
 	struct bang_output e;
-	ok = bang(&o, &e, cmd, start, end - start);
-	if (!ok) {
+	if (!queryuser(cmd, sizeof(cmd), "COMMAND")) {
+		return -1;
+	}
+	if (bang(&o, &e, cmd, start, end - start) < 0) {
 		clrscreen();
 		drawmessage(e.buf);
 		present();
 		getch();
-		ok = true;
+		err = 0;
 		goto cleanup;
 	}
+	err = 0;
 	yank_store(start, end);
 	saveyanks();
 	if (recdelete(start, end) < 0) {
-		ok = false;
+		err = -1;
 		goto cleanup;
 	}
 	bufdelete(start, end);
 	if (!(start = bufinsertstr(o.buf, o.buf + o.sz, start))) {
-		ok = false;
+		err = -1;
 		goto cleanup;
 	}
 	if (recinsert(start, start + o.sz) < 0) {
-		ok = false;
+		err = -1;
 		goto cleanup;
 	}
 	recstep();
@@ -702,7 +693,7 @@ cleanup:
 	free(o.buf);
 	free(e.buf);
 	refresh_bounds();
-	return ok;
+	return err;
 }
 
 static enum loopsig bangcmd(void)
@@ -712,7 +703,10 @@ static enum loopsig bangcmd(void)
 	huntrange(&r);
 	if (!r.start || !r.end)
 		return LOOP_SIGCNT;
-	return checksig(ranged_bang(r.start, r.end));
+	if (ranged_bang(r.start, r.end) < 0)
+		return LOOP_SIGERR;
+	else
+		return LOOP_SIGCNT;
 }
 
 static enum loopsig banglinescmd(void)
@@ -721,7 +715,10 @@ static enum loopsig banglinescmd(void)
 	struct linerange r = huntlinerange();
 	if (!r.start || !r.end)
 		return LOOP_SIGCNT;
-	return checksig(ranged_bang(r.start, r.end));
+	if (ranged_bang(r.start, r.end) < 0)
+		return LOOP_SIGERR;
+	else
+		return LOOP_SIGCNT;
 }
 
 static enum loopsig togglewhitespacecmd(void)

@@ -1,5 +1,4 @@
 #include <assert.h>
-#include <stdbool.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <fcntl.h>
@@ -19,47 +18,6 @@ static void closepipes(int in[2], int out[2], int err[2]);
 static void child_exec(int in[2], int out[2], int err[2], char *cmd);
 static enum write_err write_input(int in, char *data, int sz);
 static struct bang_output collect_output(int out);
-
-bool bang(
-	struct bang_output *out, struct bang_output *err,
-	char *cmd, char *input, int input_sz)
-{
-	int inpipe[2];
-	int outpipe[2];
-	int errpipe[2];
-	if (openpipes(inpipe, outpipe, errpipe) != PIPE_OK) {
-		seterr("pipe");
-		*out = NULL_OUTPUT;
-		*err = NULL_OUTPUT;
-		return false;
-	}
-
-	int child = fork();
-	if (child == -1) {
-		seterr("fork");
-		closepipes(inpipe, outpipe, errpipe);
-		*out = NULL_OUTPUT;
-		*err = NULL_OUTPUT;
-		return false;
-	}
-
-	if (child == 0) {
-		child_exec(inpipe, outpipe, errpipe, cmd);
-	} else {
-		close(inpipe[0]);
-		close(outpipe[1]);
-		close(errpipe[1]);
-		write_input(inpipe[1], input, input_sz);
-		*out = collect_output(outpipe[0]);
-		*err = collect_output(errpipe[0]);
-		int status;
-		wait(&status);
-		if (status != EXIT_SUCCESS)
-			return false;
-	}
-
-	return true;
-}
 
 static enum pipe_err openpipes(int in[2], int out[2], int err[2])
 {
@@ -143,4 +101,45 @@ static struct bang_output collect_output(int fd)
 	}
 	close(fd);
 	return (struct bang_output) { .buf = allocated, .sz = datasz };
+}
+
+int bang(
+	struct bang_output *out, struct bang_output *err,
+	char *cmd, char *input, int input_sz)
+{
+	int inpipe[2];
+	int outpipe[2];
+	int errpipe[2];
+	if (openpipes(inpipe, outpipe, errpipe) != PIPE_OK) {
+		seterr("pipe");
+		*out = NULL_OUTPUT;
+		*err = NULL_OUTPUT;
+		return -1;
+	}
+
+	int child = fork();
+	if (child == -1) {
+		seterr("fork");
+		closepipes(inpipe, outpipe, errpipe);
+		*out = NULL_OUTPUT;
+		*err = NULL_OUTPUT;
+		return -1;
+	}
+
+	if (child == 0) {
+		child_exec(inpipe, outpipe, errpipe, cmd);
+	} else {
+		close(inpipe[0]);
+		close(outpipe[1]);
+		close(errpipe[1]);
+		write_input(inpipe[1], input, input_sz);
+		*out = collect_output(outpipe[0]);
+		*err = collect_output(errpipe[0]);
+		int status;
+		wait(&status);
+		if (status != EXIT_SUCCESS)
+			return -1;
+	}
+
+	return 0;
 }
