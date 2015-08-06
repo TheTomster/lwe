@@ -53,6 +53,9 @@ Quick command reference:
 	n			display line numbers
 	s			show whitespace
 
+	/			search forward
+	?			search backward
+
 
 Compiling / Installing
 
