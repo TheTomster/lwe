@@ -1,6 +1,6 @@
 /* (C) 2015 Tom Wright. */
 
-bool show_whitespace;
+int show_whitespace;
 
 void initcurses(void);
 void clrscreen(void);
@@ -30,7 +30,7 @@ void drawyanks(void);
 void draw_eof(void);
 
 int skips(int lvl);
-bool onlymatch(char c, int lvl, int toskip);
+int onlymatch(char c, int lvl, int toskip);
 
 int count(char c);
 int countwithin(char *start, char *end, char c);

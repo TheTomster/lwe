@@ -3,14 +3,13 @@
 #include <assert.h>
 #include <ctype.h>
 #include <curses.h>
-#include <stdbool.h>
 #include <string.h>
 
 #include "draw.h"
 #include "buffer.h"
 #include "yank.h"
 
-bool show_whitespace;
+int show_whitespace;
 
 static char *scroll_ptr;
 static int scroll_linum;
@@ -259,7 +258,7 @@ int skips(int lvl)
 	return i - 1;
 }
 
-bool onlymatch(char c, int lvl, int toskip)
+int onlymatch(char c, int lvl, int toskip)
 {
 	// If the initial skip + this level's skip in between matches is
 	// greater than the count of matching characters in the window,
