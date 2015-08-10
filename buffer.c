@@ -118,12 +118,14 @@ char *bufinsert(char c, char *t)
 char *bufinsertstr(char *start, char *end, char *t)
 {
 	char *i;
+	unsigned d;
 	assert(inbuf(t));
 	assert(end >= start);
-	for (i = start; i < end; i++)
+	for (i = start; i < end; i++, t++)
 		if (!(t = bufinsert(*i, t)))
 			return t;
-	return t;
+	d = end - start;
+	return t - d;
 }
 
 void bufdelete(char *start, char *end)
