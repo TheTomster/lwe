@@ -136,8 +136,9 @@ int bang(
 		*out = collect_output(outpipe[0]);
 		*err = collect_output(errpipe[0]);
 		int status;
-		wait(&status);
-		if (status != EXIT_SUCCESS)
+		if (wait(&status) < 0)
+			return -1;
+		if (WEXITSTATUS(status) != EXIT_SUCCESS)
 			return -1;
 	}
 
