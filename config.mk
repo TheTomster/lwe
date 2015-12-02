@@ -3,7 +3,7 @@ LIBS = -lcurses
 # for `flock`.
 #LIBS += -lbsd-compat
 
-CFLAGS += -g -std=c99 -pedantic -Wall -Wextra -Os -D_BSD_SOURCE
+CFLAGS += -g -std=c99 -pedantic -Wall -Wextra -Os -D_DEFAULT_SOURCE
 LDFLAGS += -g ${LIBS}
 
 # CC = cc
