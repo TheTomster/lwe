@@ -402,6 +402,8 @@ static int queryuser(char *out, int out_sz, char *prompt)
 		if (c == '\r') {
 			return 0;
 		} else if (c == KEY_BACKSPACE || c == 127) {
+			if (i <= 0)
+				continue;
 			i--;
 			out[i] = '\0';
 		} else if (!isgraph(c) && !isspace(c)) {
