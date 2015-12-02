@@ -401,6 +401,8 @@ static int queryuser(char *out, int out_sz, char *prompt)
 		int c = getch();
 		if (c == '\r') {
 			return 0;
+		} else if (c == C_D) {
+			return -1;
 		} else if (c == KEY_BACKSPACE || c == 127) {
 			if (i <= 0)
 				continue;
@@ -429,7 +431,8 @@ static enum loopsig jumptolinecmd(void)
 	drawmodeline(filename, mode);
 	present();
 	char buf[32];
-	queryuser(buf, sizeof(buf), "JUMP");
+	if (queryuser(buf, sizeof(buf), "JUMP") < 0)
+		return LOOP_SIGCNT;
 	int i = atoi(buf);
 	if (i == 0)
 		return LOOP_SIGCNT;
@@ -804,7 +807,7 @@ static enum loopsig directionalsearch(int delta)
 	char *cpos, *spos, *e, *i;
 	int err, n;
 	if (queryuser(rebuf, sizeof(rebuf), "/") < 0)
-		return LOOP_SIGERR;
+		return LOOP_SIGCNT;
 	if (rebuf[0] != '\0')
 		snprintf(current_search, sizeof(current_search), "%s", rebuf);
 	if ((err = regcomp(&reg, current_search, REG_EXTENDED)) != 0) {
