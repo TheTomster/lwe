@@ -59,9 +59,13 @@ Quick command reference:
 
 Compiling / Installing
 
-You should be able to simply clone the git repository and run make.
+I use lwe on Linux and on Windows via Cygwin.  In these environments,
+you should be able to simply clone the git repository and run make.
 If that gives you errors about missing curses headers, you may need to
-install libncurses-dev (or the equivalent for your system).
+install libncurses-dev (or the equivalent for your system).  OS X should
+be able to compile and run lwe as well, but I don't test it regularly so
+it's less guaranteed.  The code should be fairly portable but it isn't
+a priority so your mileage may vary.
 
 To install you can copy the lwe executable to a location in your $PATH.
 I usually have ~/bin in my path so I copy it to ~/bin/lwe.
