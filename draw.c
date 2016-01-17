@@ -9,6 +9,10 @@
 #include "buffer.h"
 #include "yank.h"
 
+#define MODELINE 1
+#define WHITESPACE 2
+#define TARGET 3
+
 int show_whitespace;
 
 static char *scroll_ptr;
@@ -123,19 +127,19 @@ static void pc(char c)
 	else if (!isgraph(c) && !isspace(c))
 		c = '?';
 	if (show_whitespace && c == ' ') {
-		attron(A_DIM);
+		attron(COLOR_PAIR(WHITESPACE));
 		addch('.');
-		attroff(A_DIM);
+		attroff(COLOR_PAIR(WHITESPACE));
 	} else if (show_whitespace && c == '\n') {
-		attron(A_DIM);
+		attron(COLOR_PAIR(WHITESPACE));
 		addch('$');
 		addch('\n');
-		attroff(A_DIM);
+		attroff(COLOR_PAIR(WHITESPACE));
 	} else if (show_whitespace && c == '\t') {
-		attron(A_DIM);
+		attron(COLOR_PAIR(WHITESPACE));
 		for (int i = 0; i < TABSIZE; i++)
 			addch('-');
-		attroff(A_DIM);
+		attroff(COLOR_PAIR(WHITESPACE));
 	} else {
 		addch(c);
 	}
@@ -145,9 +149,11 @@ void drawmodeline(char *filename, char *mode)
 {
 	int r = LINES - 1;
 	char buf[8192];
+	attron(COLOR_PAIR(1));
 	snprintf(buf, sizeof(buf), "[F: %-32.32s][M: %-24s][L: %8d]",
 			filename, mode, scroll_line());
 	mvaddstr(r, 0, buf);
+	attroff(COLOR_PAIR(MODELINE));
 }
 
 void drawtext()
@@ -172,6 +178,10 @@ void initcurses()
 #else
 	ESCDELAY = 25;
 #endif
+	start_color();
+	init_pair(MODELINE, COLOR_CYAN, COLOR_BLACK);
+	init_pair(WHITESPACE, COLOR_BLUE, COLOR_BLACK);
+	init_pair(TARGET, COLOR_BLACK, COLOR_GREEN);
 }
 
 static void advcursor(char c)
@@ -211,9 +221,9 @@ static void ptarg(int count)
 {
 	char a;
 	a = 'a' + (count % 26);
-	attron(A_STANDOUT);
+	attron(COLOR_PAIR(TARGET));
 	pc(a);
-	attroff(A_STANDOUT);
+	attroff(COLOR_PAIR(TARGET));
 }
 
 void drawlinelbls(int lvl, int off)
@@ -286,7 +296,7 @@ void drawlineoverlay(void)
 	int lineno = scroll_line() + 1;
 	int screenline = 0;
 	int fileline = 0;
-	attron(A_STANDOUT);
+	attron(COLOR_PAIR(TARGET));
 	while (screenline < LINES) {
 		char nstr[32];
 		snprintf(nstr, sizeof(nstr), "%4d", lineno);
@@ -298,15 +308,15 @@ void drawlineoverlay(void)
 		fileline++;
 		lineno++;
 	}
-	attroff(A_STANDOUT);
+	attroff(COLOR_PAIR(TARGET));
 }
 
 void drawmessage(char *msg)
 {
 	assert(msg != NULL);
-	attron(A_STANDOUT);
+	attron(COLOR_PAIR(MODELINE));
 	mvaddstr(LINES - 1, 0, msg);
-	attroff(A_STANDOUT);
+	attroff(COLOR_PAIR(MODELINE));
 }
 
 void drawyanks()
@@ -318,9 +328,9 @@ void drawyanks()
 	lines = LINES;
 	linestodraw = nyanks < lines ? nyanks : lines;
 	for (i = 0; i < linestodraw; i++) {
-		attron(A_STANDOUT);
+		attron(COLOR_PAIR(TARGET));
 		mvaddch(i, 0, 'a' + i);
-		attroff(A_STANDOUT);
+		attroff(COLOR_PAIR(TARGET));
 		yank_item(&ytext, &ysz, i);
 		previewsz = COLS - 2;
 		if (ysz < previewsz)
