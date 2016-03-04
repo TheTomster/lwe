@@ -882,6 +882,8 @@ static int cmdloop(void)
 		drawmodeline(filename, mode);
 		present();
 		int c = getch();
+		if (c == ERR)
+			continue;
 		command_fn cmd = cmdtbl[c];
 		if (cmd == NULL)
 			continue;
