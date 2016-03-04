@@ -666,7 +666,7 @@ static int ranged_bang(char *start, char *end)
 	struct bang_output o;
 	struct bang_output e;
 	if (queryuser(cmd, sizeof(cmd), "COMMAND") < 0) {
-		return -1;
+		return 0;
 	}
 	if (bang(&o, &e, cmd, start, end - start) < 0) {
 		clrscreen();
