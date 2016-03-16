@@ -90,7 +90,7 @@ static enum loopsig undocmd(void);
 static enum loopsig redocmd(void);
 static enum loopsig preputlinecmd(void);
 static enum loopsig putlinecmd(void);
-static enum loopsig directionalsearch(int delta);
+static enum loopsig directionalsearch(char *search_prompt, int delta);
 static enum loopsig searchcmd(void);
 static enum loopsig rsearchcmd(void);
 static int cmdloop(void);
@@ -806,13 +806,13 @@ static enum loopsig putlinecmd(void)
 	return LOOP_SIGCNT;
 }
 
-static enum loopsig directionalsearch(int delta)
+static enum loopsig directionalsearch(char *search_prompt, int delta)
 {
 	char rebuf[8192];
 	regex_t reg;
 	char *cpos, *spos, *e, *i;
 	int err, n;
-	if (queryuser(rebuf, sizeof(rebuf), "/") < 0)
+	if (queryuser(rebuf, sizeof(rebuf), search_prompt) < 0)
 		return LOOP_SIGCNT;
 	if (rebuf[0] != '\0')
 		snprintf(current_search, sizeof(current_search), "%s", rebuf);
@@ -869,12 +869,12 @@ static enum loopsig directionalsearch(int delta)
 
 static enum loopsig searchcmd(void)
 {
-	return directionalsearch(1);
+	return directionalsearch("/", 1);
 }
 
 static enum loopsig rsearchcmd(void)
 {
-	return directionalsearch(-1);
+	return directionalsearch("?", -1);
 }
 
 static int cmdloop(void)
