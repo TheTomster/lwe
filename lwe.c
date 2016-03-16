@@ -622,7 +622,10 @@ static enum loopsig insertlinecmd(void)
 	int lineno;
 	char *t;
 	mode = "TARGET (INSERT)";
-	lineno = huntline();
+	if (bufempty())
+		lineno = 0;
+	else
+		lineno = huntline();
 	if (lineno == -1)
 		return LOOP_SIGCNT;
 	if(!(t = bufline(winstart(), lineno)))
@@ -642,7 +645,10 @@ static enum loopsig appendlinecmd(void)
 	int lineno;
 	char *lns, *lne;
 	mode = "TARGET (APPEND)";
-	lineno = huntline();
+	if (bufempty())
+		lineno = 0;
+	else
+		lineno = huntline();
 	if (lineno == -1)
 		return LOOP_SIGCNT;
 	lns = bufline(winstart(), lineno);
