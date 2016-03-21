@@ -9,11 +9,11 @@
 
 #include "bang.h"
 #include "buffer.h"
-#include "err.h"
 #include "draw.h"
-#include "yank.h"
-#include "undo.h"
+#include "err.h"
 #include "insert.h"
+#include "undo.h"
+#include "yank.h"
 
 #define bufempty() (getbufstart() == getbufend())
 #define screenline(n) (skipscreenlines(winstart(), n))
