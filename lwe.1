@@ -1,0 +1,140 @@
+.Dd Oct 22, 2017
+.Dt LWE 1
+.Os
+.
+.Sh NAME
+.
+.Nm lwe
+.Nd a cursorless text editor
+.
+.Sh SYNOPSIS
+.
+.Nm
+.Ar file
+.
+.Sh DESCRIPTION
+.
+.Nm
+is a modal text editor for the terminal which does not make use of
+the cursor for most of text operations.
+It has few keybindings, common with
+.Xr vi 1
+and
+.Xr ed 1
+but use them differently.
+.
+.Pp
+When it starts up, lwe is in COMMAND mode.
+In this default mode it interprets your keypresses as commands to run.
+Pressing lowercase i while in COMMAND mode will switch to INSERT mode.
+.Nm
+will prompt you for the position
+.Pq press the letter then follow the hints
+or the line
+.Pq directly with hints .
+.Pp
+Press
+.Ic Esc
+or
+.Ic C-d
+to exit INSERT mode.
+.Pp
+The last line of the screen displays some status information, including what
+mode you're in.
+It also tells the name of the file you are currently editing, as well
+as what line you are scrolled to.
+.Bd -literal -offset indent
+[F: filename    ][M: mode    ][L: scroll pos]
+.Ed
+.
+.Sh KEY BINDINGS
+.
+.Bl -tag -width Ds
+.It Ic j , Ic C-d , Ic Down , Ic PgUp
+scroll down
+.
+.It Ic k , Ic C-u , Ic Up , Ic PgUp
+scroll up
+.
+.It Ic g Ar num
+goto line
+.Ar num
+.
+.It Ic q
+quit
+.
+.It Ic w
+write the buffer to the file
+.
+.It Ic i Ar pos , Ic I Ar line
+insert at position
+.Ar pos
+.Pq Ic i
+or before line
+.Ar pos
+.Pq Ic I .
+.
+.It Ic a Ar pos , Ic A Ar line
+append at position
+.Pq Ic i
+or after line
+.Pq Ic A
+.
+.It Ic d Ar p1 Ar p2 , Ic D Ar l1 Ar l2
+delete between position
+.Ar p1
+and
+.Ar p2
+or lines
+.Ar l1
+and
+.Ar l2 .
+.
+.It Ic c Ar p1 Ar p2 , Ic C Ar l1 Ar l2
+change text between position
+.Ar p1
+and
+.Ar p2
+or lines
+.Ar l1
+and
+.Ar l2 .
+.
+.It Ic y Ar p1 Ar p2 , Ic Y Ar l1 Ar l2
+Copy text between position
+.Ar p1
+and
+.Ar p2
+or lines
+.Ar l1
+and
+.Ar l2 .
+.
+.It Ic o Ar pos , Ic O Ar line
+paste copied text before position
+.Ar pos
+.Pq Ic o
+or line
+.Ar line
+.
+.It Ic u
+undo
+.
+.It Ic r
+redo
+.
+.It Ic 1 Ar p1 Ar p2 , Ic \! Ar l1 Ar l2
+.
+.It Ic n
+display line numbers
+.
+.It Ic s
+show whitespace.
+.
+.It Ic /
+search forward.
+.
+.It Ic \?
+search backward.
+.
+.El
